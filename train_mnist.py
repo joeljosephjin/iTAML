@@ -37,6 +37,9 @@ from basic_net import *
 from learner_task_itaml import Learner
 import incremental_dataloader as data
 
+import wandb
+
+
 class args:
 
     checkpoint = "results/cifar100/meta_mnist_T5_47"
@@ -76,6 +79,10 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 if use_cuda:
     torch.cuda.manual_seed_all(seed)
+
+
+wandb.init(project='itaml', entity='joeljosephjin', config=vars(args))
+
 
 def main():
 
@@ -139,7 +146,7 @@ def main():
         
         
         main_learner=Learner(model=model,args=args,trainloader=train_loader,
-                                testloader=test_loader, use_cuda=use_cuda)
+                                testloader=test_loader, use_cuda=use_cuda, wandb=wandb, ses=ses)
         
         
         main_learner.learn()
