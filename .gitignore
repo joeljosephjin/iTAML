@@ -1,2 +1,5 @@
 
 wandb
+__pycache__
+idatasets/__pycache__
+utils/__pycache__
