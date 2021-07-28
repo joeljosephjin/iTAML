@@ -13,6 +13,7 @@ from resnet import *
 import random
 from radam import *
 
+import wandb
 
 class ResNet_features(nn.Module):
     def __init__(self, original_model):
@@ -46,6 +47,8 @@ class Learner():
             if("fc" in n):
                 normal_parameters.append(p)
       
+        wandb.init(project='itaml', entity='joeljosephjin', config=vars(args))
+
         if(self.args.optimizer=="radam"):
             self.optimizer = RAdam(meta_parameters, lr=self.args.lr, betas=(0.9, 0.999), weight_decay=0)
         elif(self.args.optimizer=="adam"):
@@ -68,6 +71,7 @@ class Learner():
         
             # append logger file
             logger.append([self.state['lr'], self.train_loss, self.test_loss, self.train_acc, self.test_acc, self.best_acc])
+            wandb.log({"epoch":epoch, "train_loss":self.train_loss, "test_loss":self.test_loss, "train_acc":self.train_acc, "test_acc":self.test_acc})
 
             # save model
             is_best = self.test_acc > self.best_acc
@@ -77,6 +81,7 @@ class Learner():
             self.best_acc = max(self.test_acc, self.best_acc)
             if(epoch==self.args.epochs-1):
                 self.save_checkpoint(self.best_model.state_dict(), True, checkpoint=self.args.savepoint, filename='session_'+str(self.args.sess)+'_model_best.pth.tar')
+                wandb.watch(self.best_model)
         self.model = copy.deepcopy(self.best_model)
         
         logger.close()
@@ -84,6 +89,7 @@ class Learner():
         savefig(os.path.join(self.args.checkpoint, 'log.eps'))
 
         print('Best acc:')
+        wandb.log({"best_acc":self.best_acc})
         print(self.best_acc)
     
     def train(self, model, epoch):

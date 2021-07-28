@@ -1,0 +1,26 @@
+{
+    "os": "Linux-5.4.104+-x86_64-with-Ubuntu-18.04-bionic",
+    "python": "3.7.11",
+    "heartbeatAt": "2021-07-28T13:25:51.182187",
+    "startedAt": "2021-07-28T13:25:49.038881",
+    "docker": null,
+    "gpu": "Tesla P100-PCIE-16GB",
+    "gpu_count": 1,
+    "cpu_count": 2,
+    "cuda": "11.0.228",
+    "args": [
+        "0"
+    ],
+    "state": "running",
+    "program": "train_mnist.py",
+    "codePath": "train_mnist.py",
+    "git": {
+        "remote": "https://joeljosephjin:@github.com/joeljosephjin/itaml.git",
+        "commit": "e56e72baf82b1542e589b519e8a13c7301880650"
+    },
+    "email": "uname+@gmail.com",
+    "root": "/content/iTAML",
+    "host": "fbdefe3c18da",
+    "username": "root",
+    "executable": "/usr/bin/python3"
+}
