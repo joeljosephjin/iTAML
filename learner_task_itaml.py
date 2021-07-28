@@ -81,7 +81,7 @@ class Learner():
             self.best_acc = max(self.test_acc, self.best_acc)
             if(epoch==self.args.epochs-1):
                 self.save_checkpoint(self.best_model.state_dict(), True, checkpoint=self.args.savepoint, filename='session_'+str(self.args.sess)+'_model_best.pth.tar')
-                self.wandb.watch(self.best_model)
+                # self.wandb.watch(self.best_model)
         self.model = copy.deepcopy(self.best_model)
         
         logger.close()
