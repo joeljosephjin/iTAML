@@ -81,7 +81,9 @@ if use_cuda:
     torch.cuda.manual_seed_all(seed)
 
 
-wandb.init(project='itaml', entity='joeljosephjin', config=vars(args))
+wandb.init(project='itaml', entity='joeljosephjin', config=state)
+checkpoint = wandb.run.dir + args.checkpoint
+savepoint = wandb.run.dir + args.savepoint
 
 
 def main():
