@@ -53,7 +53,8 @@ class args:
     optimizer = 'sgd'
     
     epochs = 20
-    lr = 0.1
+    # lr = 0.1
+    lr = 1e-4
     train_batch = 256
     test_batch = 256
     workers = 16
