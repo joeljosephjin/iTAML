@@ -157,7 +157,9 @@ def main():
         memory = inc_dataset.get_memory(memory, for_memory)
 
         acc_task = main_learner.meta_test(main_learner.best_model, memory, inc_dataset)
-        
+
+        # print('this here', acc_task)
+        wandb.log({'acc_meta_test':np.mean(list(acc_task.values()))})        
         
         with open(savepoint + "/memory_"+str(args.sess)+".pickle", 'wb') as handle:
             pickle.dump(memory, handle, protocol=pickle.HIGHEST_PROTOCOL)
