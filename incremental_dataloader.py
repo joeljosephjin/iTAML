@@ -21,7 +21,6 @@ from idatasets.CUB200 import Cub2011
 from idatasets.omniglot import Omniglot
 from idatasets.celeb_1m import MS1M
 import collections
-from utils.cutout import Cutout
 
 class SubsetRandomSampler(Sampler):
     r"""Samples elements randomly from a given list of indices, without replacement.

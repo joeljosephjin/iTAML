@@ -1,6 +1,6 @@
 import os
 import torch
-from utils import AverageMeter
+# from utils import AverageMeter
 import torch.optim as optim
 import time
 import pickle
@@ -74,18 +74,16 @@ class Learner():
     def train(self, model, epoch):
         model.train()
 
-        batch_time = AverageMeter()
-        data_time = AverageMeter()
-        losses = AverageMeter()
-        top1 = AverageMeter()
-        top5 = AverageMeter()
-        end = time.time()
+        # losses = AverageMeter()
+        losses = []
+        # top1 = AverageMeter()
+        top1 = []
+        # top5 = AverageMeter()
+        top5 = []
         
         bi = self.args.class_per_task*(1+self.args.sess)
         
         for batch_idx, (inputs, targets) in enumerate(self.trainloader):
-            # measure data loading time
-            data_time.update(time.time() - end)
             sessions = []
              
             targets_one_hot = torch.FloatTensor(inputs.shape[0], bi)
@@ -148,23 +146,25 @@ class Learner():
                 
             # measure accuracy and record loss
             prec1, prec5 = accuracy(output=outputs2.data[:,0:bi], target=targets.cuda().data, topk=(1, 1))
-            losses.update(loss.item(), inputs.size(0))
-            top1.update(prec1.item(), inputs.size(0))
-            top5.update(prec5.item(), inputs.size(0))
-            
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-        self.train_loss,self.train_acc=losses.avg, top1.avg
+            # losses.update(loss.item(), inputs.size(0))
+            losses.append(loss.item())
+            # top1.update(prec1.item(), inputs.size(0))
+            top1.append(prec1.item())
+            # top5.update(prec5.item(), inputs.size(0))
+            top5.append(prec5.item())
+        
+        self.train_acc = sum(losses)/len(losses)
+        top1_avg = sum(top1)/len(top1)
+        self.train_loss,self.train_acc, top1_avg
 
     def test(self, model):
 
-        batch_time = AverageMeter()
-        data_time = AverageMeter()
-        losses = AverageMeter()
-        top1 = AverageMeter()
-        top5 = AverageMeter()
+        # losses = AverageMeter()
+        losses = []
+        # top1 = AverageMeter()
+        top1 = []
+        # top5 = AverageMeter()
+        top5 = []
         class_acc = {}
         
         
@@ -191,9 +191,12 @@ class Learner():
             prec1, prec5 = accuracy(outputs2.data[:,0:self.args.class_per_task*(1+self.args.sess)], targets.cuda().data, topk=(1, 1))
 
 
-            losses.update(loss.item(), inputs.size(0))
-            top1.update(prec1.item(), inputs.size(0))
-            top5.update(prec5.item(), inputs.size(0))
+            # losses.update(loss.item(), inputs.size(0))
+            losses.append(loss.item())
+            # top1.update(prec1.item(), inputs.size(0))
+            top1.append(prec1.item())
+            # top5.update(prec5.item(), inputs.size(0))
+            top5.append(prec5.item())
             # measure elapsed time
             
             pred = torch.argmax(outputs2[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False)
@@ -209,7 +212,7 @@ class Learner():
                     else:
                         class_acc[key] = 1
                         
-        self.test_loss= losses.avg;self.test_acc= top1.avg
+        self.test_loss= sum(losses)/len(losses); self.test_acc= sum(top1)/len(top1)
             
         acc_task = {}
         for i in range(self.args.sess+1):
