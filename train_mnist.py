@@ -5,7 +5,6 @@ import numpy as np
 
 import torch
 import sys
-import collections
 
 from basic_net import *
 from learner_task_itaml import Learner
@@ -80,8 +79,10 @@ def main():
             args.epochs = 20
             
         task_info, train_loader, val_loader, test_loader, for_memory = inc_dataset.new_task(memory)
-        print(task_info)
-        print(inc_dataset.sample_per_task_testing)
+
+        print('task_info:', task_info)
+        print('sample_per_task_testing:', inc_dataset.sample_per_task_testing)
+
         args.sample_per_task_testing = inc_dataset.sample_per_task_testing
         
         main_learner=Learner(model=model,args=args,trainloader=train_loader, testloader=test_loader, use_cuda=use_cuda, ses=ses)
