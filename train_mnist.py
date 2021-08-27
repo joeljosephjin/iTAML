@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import sys
 
-from basic_net import *
+from utils import BasicNet1
 from learner_task_itaml import Learner
 import incremental_dataloader as data
 
