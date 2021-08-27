@@ -1,6 +1,6 @@
 import os
 import torch
-from utils import AverageMeter, accuracy
+from utils import AverageMeter
 import torch.optim as optim
 import time
 import pickle
@@ -10,15 +10,21 @@ import numpy as np
 import copy
 from radam import *
 
+def accuracy(output, target, topk=(1,)):
+    """Computes the accuracy over the k top predictions for the specified values of k"""
 
-class ResNet_features(nn.Module):
-    def __init__(self, original_model):
-        super(ResNet_features, self).__init__()
-        self.features = nn.Sequential(*list(original_model.children())[:-1])
-        
-    def forward(self, x):
-        x = self.features(x)
-        return x
+    maxk = max(topk)
+    batch_size = target.size(0)
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+
+    res = []
+    for k in topk:
+        correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+        res.append(correct_k.mul_(100.0 / batch_size))
+    return res
     
 class Learner():
     def __init__(self,model,args,trainloader,testloader, use_cuda, ses):
