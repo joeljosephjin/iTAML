@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
-from resnet import *
+from resnet import RPS_net_mlp
 
 class BasicNet1(nn.Module):
 
@@ -97,7 +97,6 @@ class BasicNet1(nn.Module):
         self.classifier = classifier
 
     def _gen_classifier(self, n_classes):
-#         torch.manual_seed(self.seed)
         classifier = nn.Linear(self.convnet.out_dim, n_classes, bias=self.use_bias).cuda()
         if self.init == "kaiming":
             nn.init.kaiming_normal_(classifier.weight, nonlinearity="linear")

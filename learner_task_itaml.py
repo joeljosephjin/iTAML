@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import copy
-from resnet import *
 from radam import *
 
 
@@ -210,7 +209,10 @@ class Learner():
         for i in range(self.args.sess+1):
             acc_task[i] = 0
             for j in range(self.args.class_per_task):
-                acc_task[i] += class_acc[i*self.args.class_per_task+j]/self.args.sample_per_task_testing[i] * 100
+                try:
+                    acc_task[i] += class_acc[i*self.args.class_per_task+j]/self.args.sample_per_task_testing[i] * 100
+                except:
+                    pass
 
         print("\n".join([str(acc_task[k]).format(".4f") for k in acc_task.keys()]) )    
         print(class_acc)
