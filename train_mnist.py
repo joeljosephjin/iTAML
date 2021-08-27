@@ -31,9 +31,6 @@ from basic_net import *
 from learner_task_itaml import Learner
 import incremental_dataloader as data
 
-import wandb
-
-
 class args:
 
     checkpoint = "results/cifar100/meta_mnist_T5_47"
@@ -76,13 +73,6 @@ if use_cuda:
     torch.cuda.manual_seed_all(seed)
 
 
-wandb.init(project='itaml', entity='joeljosephjin', config=state)
-args.checkpoint = wandb.run.dir + '/' + args.checkpoint
-checkpoint = args.checkpoint
-args.savepoint = wandb.run.dir + '/'  + args.savepoint
-savepoint = args.savepoint
-
-
 def main():
 
     model = BasicNet1(args, 0).cuda() 
@@ -91,12 +81,6 @@ def main():
     print('  Total params: %.2fM ' % (sum(p.numel() for p in model.parameters())/1000000.0))
 
 
-    if not os.path.isdir(checkpoint):
-        mkdir_p(checkpoint)
-    if not os.path.isdir(savepoint):
-        mkdir_p(savepoint)
-    np.save(checkpoint + "/seed.npy", seed)
-    
     inc_dataset = data.IncrementalDataset(
                         dataset_name=args.dataset,
                         args = args,
@@ -116,27 +100,16 @@ def main():
         args.sess=ses 
         
         if(ses==0):
-            torch.save(model.state_dict(), os.path.join(savepoint, 'base_model.pth.tar'))
             args.epochs = 5
         if(ses==4):
             args.lr = 0.05
         if(start_sess==ses and start_sess!=0): 
             inc_dataset._current_task = ses
-            with open(savepoint + "/sample_per_task_testing_"+str(args.sess-1)+".pickle", 'rb') as handle:
-                sample_per_task_testing = pickle.load(handle)
             inc_dataset.sample_per_task_testing = sample_per_task_testing
             args.sample_per_task_testing = sample_per_task_testing
         
         if ses>0: 
             args.epochs = 20
-            path_model=os.path.join(savepoint, 'session_'+str(ses-1) + '_model_best.pth.tar')  
-            prev_best=torch.load(path_model)
-            model.load_state_dict(prev_best)
-
-            with open(savepoint + "/memory_"+str(args.sess-1)+".pickle", 'rb') as handle:
-                memory = pickle.load(handle)
-            
-            
             
         task_info, train_loader, val_loader, test_loader, for_memory = inc_dataset.new_task(memory)
         print(task_info)
@@ -145,7 +118,7 @@ def main():
         
         
         main_learner=Learner(model=model,args=args,trainloader=train_loader,
-                                testloader=test_loader, use_cuda=use_cuda, wandb=wandb, ses=ses)
+                                testloader=test_loader, use_cuda=use_cuda, ses=ses)
         
         
         main_learner.learn()
@@ -153,18 +126,6 @@ def main():
 
         acc_task = main_learner.meta_test(main_learner.best_model, memory, inc_dataset)
 
-        # print('this here', acc_task)
-        wandb.log({'acc_meta_test':np.mean(list(acc_task.values()))})        
-        
-        with open(savepoint + "/memory_"+str(args.sess)+".pickle", 'wb') as handle:
-            pickle.dump(memory, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        with open(savepoint + "/acc_task_"+str(args.sess)+".pickle", 'wb') as handle:
-            pickle.dump(acc_task, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            
-        with open(savepoint + "/sample_per_task_testing_"+str(args.sess)+".pickle", 'wb') as handle:
-            pickle.dump(inc_dataset.sample_per_task_testing, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        
         time.sleep(5)
 if __name__ == '__main__':
     main()

@@ -24,7 +24,7 @@ class ResNet_features(nn.Module):
         return x
     
 class Learner():
-    def __init__(self,model,args,trainloader,testloader, use_cuda, wandb, ses):
+    def __init__(self,model,args,trainloader,testloader, use_cuda, ses):
         self.model=model
         self.best_model=model
         self.args=args
@@ -38,7 +38,6 @@ class Learner():
         self.test_acc=0.0
         self.train_loss, self.train_acc=0.0,0.0       
 
-        self.wandb = wandb
         self.ses = ses
         
         meta_parameters = []
@@ -58,9 +57,6 @@ class Learner():
  
 
     def learn(self):
-        logger = Logger(os.path.join(self.args.checkpoint, 'session_'+str(self.args.sess)+'_log.txt'), title=self.title)
-        logger.set_names(['Learning Rate', 'Train Loss', 'Valid Loss', 'Train Acc.', 'Valid Acc.', 'Best Acc'])
-            
         for epoch in range(0, self.args.epochs):
             self.adjust_learning_rate(epoch)
             print('\nEpoch: [%d | %d] LR: %f Sess: %d' % (epoch + 1, self.args.epochs, self.state['lr'],self.args.sess))
@@ -69,27 +65,18 @@ class Learner():
 #             if(epoch> self.args.epochs-5):
             self.test(self.model)
         
-            # append logger file
-            logger.append([self.state['lr'], self.train_loss, self.test_loss, self.train_acc, self.test_acc, self.best_acc])
-            self.wandb.log({"task_num":self.ses, "epoch":epoch, "train_loss":self.train_loss, "test_loss":self.test_loss, "train_acc":self.train_acc, "test_acc":self.test_acc})
-
             # save model
             is_best = self.test_acc > self.best_acc
             if(is_best and epoch>self.args.epochs-10):
                 self.best_model = copy.deepcopy(self.model)
 
             self.best_acc = max(self.test_acc, self.best_acc)
-            if(epoch==self.args.epochs-1):
-                self.save_checkpoint(self.best_model.state_dict(), True, checkpoint=self.args.savepoint, filename='session_'+str(self.args.sess)+'_model_best.pth.tar')
-                # self.wandb.watch(self.best_model)
         self.model = copy.deepcopy(self.best_model)
         
         logger.close()
         logger.plot()
-        savefig(os.path.join(self.args.checkpoint, 'log.eps'))
 
         print('Best acc:')
-        self.wandb.log({"best_acc":self.best_acc})
         print(self.best_acc)
     
     def train(self, model, epoch):
@@ -284,11 +271,6 @@ class Learner():
         print("\n".join([str(acc_task[k]).format(".4f") for k in acc_task.keys()]) )    
         print(class_acc)
 
-        
-        with open(self.args.savepoint + "/acc_task_test_"+str(self.args.sess)+".pickle", 'wb') as handle:
-            pickle.dump(acc_task, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        
-    
     def meta_test(self, model, memory, inc_dataset):
 
         # switch to evaluate mode
