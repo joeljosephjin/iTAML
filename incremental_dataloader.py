@@ -17,9 +17,9 @@ from torchvision import datasets, transforms
 #             ('https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz', 'ec29112dd5afa0611ce80d1b7f02629c')
 #         ]
 # from imagenet import ImageNet
-from idatasets.CUB200 import Cub2011
-from idatasets.omniglot import Omniglot
-from idatasets.celeb_1m import MS1M
+# from idatasets.CUB200 import Cub2011
+# from idatasets.omniglot import Omniglot
+# from idatasets.celeb_1m import MS1M
 import collections
 
 class SubsetRandomSampler(Sampler):
@@ -98,10 +98,6 @@ class IncrementalDataset:
                 label_targets.append(target[i])
         for_memory = (label_indices.copy(),label_targets.copy())
         
-#         if(self.args.overflow and not(mode=="test")):
-#             memory_indices, memory_targets = memory
-#             return memory_indices, memory
-            
         if memory is not None:
             memory_indices, memory_targets = memory
             memory_indices2 = np.tile(memory_indices, (self.args.mu,))
@@ -142,9 +138,6 @@ class IncrementalDataset:
         print(self.increments)
         min_class = sum(self.increments[:self._current_task])
         max_class = sum(self.increments[:self._current_task + 1])
-#         if(self.args.overflow):
-#             min_class = 0
-#             max_class = sum(self.increments)
         
         train_indices, for_memory = self.get_same_index(self.train_dataset.targets, list(range(min_class, max_class)), mode="train", memory=memory)
         test_indices, _ = self.get_same_index_test_chunk(self.test_dataset.targets, list(range(max_class)), mode="test")
@@ -298,27 +291,7 @@ def _get_datasets(dataset_names):
 def _get_dataset(dataset_name):
     dataset_name = dataset_name.lower().strip()
 
-    if dataset_name == "cifar10":
-        return iCIFAR10
-    elif dataset_name == "cifar100":
-        return iCIFAR100
-    elif dataset_name == "imagenet":
-        return iIMAGENET
-    elif dataset_name == "cub200":
-        return iCUB200
-    elif dataset_name == "mnist":
-        return iMNIST
-    elif dataset_name == "caltech101":
-        return iCALTECH101
-    elif dataset_name == "celeb":
-        return iCELEB
-    elif dataset_name == "svhn":
-        return iSVHN
-    elif dataset_name == "omniglot":
-        return iOMNIGLOT
-    
-    else:
-        raise NotImplementedError("Unknown dataset {}.".format(dataset_name))
+    return iMNIST
 
 
 class DataHandler:
@@ -327,136 +300,9 @@ class DataHandler:
     mata_transforms = [transforms.ToTensor()]
     common_transforms = [transforms.ToTensor()]
     class_order = None
-
-
-class iCIFAR10(DataHandler):
-    base_dataset = datasets.cifar.CIFAR10
-    train_transforms = [
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-        transforms.ColorJitter(brightness=63 / 255),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-    ]
-    common_transforms = [
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-    ]
-
-
-class iCIFAR100(DataHandler):
-    base_dataset = datasets.cifar.CIFAR100
-    train_transforms = [
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
-    ]
-    
-    common_transforms = [
-        transforms.ToTensor(),
-        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
-    ]
-    
-
-    
-class iCALTECH101(DataHandler):
-    base_dataset = datasets.Caltech101
-    train_transforms = [
-        transforms.Resize(136),
-        transforms.RandomCrop(128, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-#         transforms.ColorJitter(brightness=63 / 255),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
-    ]
-    
-    common_transforms = [
-        transforms.Resize(130),
-        transforms.CenterCrop(128),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
-    ]
-
-class iCELEB(DataHandler):
-    
-    base_dataset = MS1M
-
-    train_transforms = [
-        transforms.RandomCrop(112, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
-    ]
-    
-    common_transforms = [
-        transforms.ToTensor(),
-        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
-    ]
-
-class iIMAGENET(DataHandler):
-    base_dataset = datasets.ImageNet
-    train_transforms = [
-        transforms.Resize(120),
-        transforms.RandomResizedCrop(112),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-#         transforms.ColorJitter(brightness=63 / 255),
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ]
-    common_transforms = [
-        transforms.Resize(115),
-        transforms.CenterCrop(112),
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ]
-
-
-class iCUB200(DataHandler):
-    base_dataset = Cub2011
-    train_transforms = [
-        transforms.Resize(230),
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-        transforms.ColorJitter(brightness=63 / 255),
-        transforms.ToTensor(),
-        
-    ]
-    common_transforms = [
-        transforms.Resize(230),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-    ]
-
     
 class iMNIST(DataHandler):
     base_dataset = datasets.MNIST
     train_transforms = [ transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,)) ]
     common_transforms = [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
-
-class iSVHN(DataHandler):
-    base_dataset = datasets.SVHN
-    train_transforms = [
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ]
-    common_transforms = [
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ]
-    
-class iOMNIGLOT(DataHandler):
-    base_dataset = datasets.Omniglot
-    train_transforms = [ transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,)) ]
-    common_transforms = [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
-    
 

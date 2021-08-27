@@ -1,6 +1,5 @@
 import os
 import torch
-# from utils import AverageMeter
 import torch.optim as optim
 import time
 import pickle
@@ -74,11 +73,8 @@ class Learner():
     def train(self, model, epoch):
         model.train()
 
-        # losses = AverageMeter()
         losses = []
-        # top1 = AverageMeter()
         top1 = []
-        # top5 = AverageMeter()
         top5 = []
         
         bi = self.args.class_per_task*(1+self.args.sess)
@@ -146,11 +142,8 @@ class Learner():
                 
             # measure accuracy and record loss
             prec1, prec5 = accuracy(output=outputs2.data[:,0:bi], target=targets.cuda().data, topk=(1, 1))
-            # losses.update(loss.item(), inputs.size(0))
             losses.append(loss.item())
-            # top1.update(prec1.item(), inputs.size(0))
             top1.append(prec1.item())
-            # top5.update(prec5.item(), inputs.size(0))
             top5.append(prec5.item())
         
         self.train_acc = sum(losses)/len(losses)
@@ -159,11 +152,8 @@ class Learner():
 
     def test(self, model):
 
-        # losses = AverageMeter()
         losses = []
-        # top1 = AverageMeter()
         top1 = []
-        # top5 = AverageMeter()
         top5 = []
         class_acc = {}
         
@@ -191,13 +181,9 @@ class Learner():
             prec1, prec5 = accuracy(outputs2.data[:,0:self.args.class_per_task*(1+self.args.sess)], targets.cuda().data, topk=(1, 1))
 
 
-            # losses.update(loss.item(), inputs.size(0))
             losses.append(loss.item())
-            # top1.update(prec1.item(), inputs.size(0))
             top1.append(prec1.item())
-            # top5.update(prec5.item(), inputs.size(0))
             top5.append(prec5.item())
-            # measure elapsed time
             
             pred = torch.argmax(outputs2[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False)
             pred = pred.view(1,-1)
@@ -227,8 +213,6 @@ class Learner():
         print(class_acc)
 
     def meta_test(self, model, memory, inc_dataset):
-
-        # switch to evaluate mode
         model.eval()
         
         meta_models = []   
@@ -315,9 +299,8 @@ class Learner():
                                 class_acc[key] += 1
                             else:
                                 class_acc[key] = 1
-                                
 
-            
+
 #           META testing - no knowledge on task
             meta_model.eval()   
             for batch_idx, (inputs, targets) in enumerate(self.testloader):
