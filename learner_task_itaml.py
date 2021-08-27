@@ -1,16 +1,14 @@
 import os
 import torch
-from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig
+from utils import AverageMeter, accuracy
 import torch.optim as optim
 import time
 import pickle
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-import pdb
 import copy
 from resnet import *
-import random
 from radam import *
 
 
@@ -28,7 +26,6 @@ class Learner():
         self.model=model
         self.best_model=model
         self.args=args
-        self.title='incremental-learning' + self.args.checkpoint.split("/")[-1]
         self.trainloader=trainloader 
         self.use_cuda=use_cuda
         self.state= {key:value for key, value in self.args.__dict__.items() if not key.startswith('__') and not callable(key)} 
@@ -54,7 +51,6 @@ class Learner():
             self.optimizer = optim.Adam(self.model.parameters(), lr=self.args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0, amsgrad=False)
         elif(self.args.optimizer=="sgd"):
             self.optimizer = optim.SGD(meta_parameters, lr=self.args.lr, momentum=0.9, weight_decay=0.001)
- 
 
     def learn(self):
         for epoch in range(0, self.args.epochs):
@@ -62,20 +58,11 @@ class Learner():
             print('\nEpoch: [%d | %d] LR: %f Sess: %d' % (epoch + 1, self.args.epochs, self.state['lr'],self.args.sess))
 
             self.train(self.model, epoch)
-#             if(epoch> self.args.epochs-5):
             self.test(self.model)
-        
-            # save model
-            is_best = self.test_acc > self.best_acc
-            if(is_best and epoch>self.args.epochs-10):
-                self.best_model = copy.deepcopy(self.model)
 
             self.best_acc = max(self.test_acc, self.best_acc)
         self.model = copy.deepcopy(self.best_model)
         
-        logger.close()
-        logger.plot()
-
         print('Best acc:')
         print(self.best_acc)
     
@@ -90,7 +77,6 @@ class Learner():
         end = time.time()
         
         bi = self.args.class_per_task*(1+self.args.sess)
-        bar = Bar('Processing', max=len(self.trainloader))
         
         for batch_idx, (inputs, targets) in enumerate(self.trainloader):
             # measure data loading time
@@ -152,41 +138,18 @@ class Learner():
             
             for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
                 alpha = np.exp(-self.args.beta*((1.0*self.args.sess)/self.args.num_task))
-#                 alpha = np.exp(-0.05*self.args.sess)
                 ll = torch.stack(reptile_grads[i])
-#                 if(p.data.size()[0]==10 and p.data.size()[1]==256):
-# #                     print(sessions)
-#                     for ik in sessions:
-# #                         print(ik)
-#                         p.data[2*ik[0]:2*(ik[0]+1),:] = ll[ik[1]][2*ik[0]:2*(ik[0]+1),:]*(alpha) + (1-alpha)* q.data[2*ik[0]:2*(ik[0]+1),:]
-#                 else:
                 p.data = torch.mean(ll,0)*(alpha) + (1-alpha)* q.data  
-                    
                 
-            
-        
             # measure accuracy and record loss
             prec1, prec5 = accuracy(output=outputs2.data[:,0:bi], target=targets.cuda().data, topk=(1, 1))
             losses.update(loss.item(), inputs.size(0))
             top1.update(prec1.item(), inputs.size(0))
             top5.update(prec5.item(), inputs.size(0))
             
-            
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
-
-            # plot progress
-            bar.suffix  = '({batch}/{size}) | Total: {total:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f} '.format(
-                        batch=batch_idx + 1,
-                        size=len(self.trainloader),
-                        total=bar.elapsed_td,
-                        loss=losses.avg,
-                        top1=top1.avg,
-                        top5=top5.avg
-                        )
-            bar.next()
-        bar.finish()
 
         self.train_loss,self.train_acc=losses.avg, top1.avg
 
@@ -206,11 +169,8 @@ class Learner():
         bi = self.args.class_per_task*(self.args.sess+1)
         
         end = time.time()
-        bar = Bar('Processing', max=len(self.testloader))
         for batch_idx, (inputs, targets) in enumerate(self.testloader):
             # measure data loading time
-            data_time.update(time.time() - end)
-#             print(targets)
             targets_one_hot = torch.FloatTensor(inputs.shape[0], self.args.num_class)
             targets_one_hot.zero_()
             targets_one_hot.scatter_(1, targets[:,None], 1)
@@ -230,8 +190,6 @@ class Learner():
             top1.update(prec1.item(), inputs.size(0))
             top5.update(prec5.item(), inputs.size(0))
             # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
             
             pred = torch.argmax(outputs2[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False)
             pred = pred.view(1,-1)
@@ -246,28 +204,14 @@ class Learner():
                     else:
                         class_acc[key] = 1
                         
-                        
-            # plot progress
-            bar.suffix  = '({batch}/{size})  Total: {total:} | Loss: {loss:.4f} | top1: {top1: .4f} | top1_task: {top5: .4f}'.format(
-                        batch=batch_idx + 1,
-                        size=len(self.testloader),
-                        total=bar.elapsed_td,
-                        loss=losses.avg,
-                        top1=top1.avg,
-                        top5=top5.avg
-                        )
-            bar.next()
-        bar.finish()
         self.test_loss= losses.avg;self.test_acc= top1.avg
             
         acc_task = {}
         for i in range(self.args.sess+1):
             acc_task[i] = 0
             for j in range(self.args.class_per_task):
-                try:
-                    acc_task[i] += class_acc[i*self.args.class_per_task+j]/self.args.sample_per_task_testing[i] * 100
-                except:
-                    pass
+                acc_task[i] += class_acc[i*self.args.class_per_task+j]/self.args.sample_per_task_testing[i] * 100
+
         print("\n".join([str(acc_task[k]).format(".4f") for k in acc_task.keys()]) )    
         print(class_acc)
 
@@ -285,7 +229,6 @@ class Learner():
             memory_data, memory_target = memory
             memory_data = np.array(memory_data, dtype="int32")
             memory_target = np.array(memory_target, dtype="int32")
-            
             
             mem_idx = np.where((memory_target>= task_idx*self.args.class_per_task) & (memory_target < (task_idx+1)*self.args.class_per_task))[0]
             meta_memory_data = memory_data[mem_idx]
@@ -306,7 +249,6 @@ class Learner():
             #META training
             if(self.args.sess!=0):
                 for ep in range(1):
-                    bar = Bar('Processing', max=len(meta_loader))
                     for batch_idx, (inputs, targets) in enumerate(meta_loader):
                         targets_one_hot = torch.FloatTensor(inputs.shape[0], (task_idx+1)*self.args.class_per_task)
                         targets_one_hot.zero_()
@@ -327,13 +269,6 @@ class Learner():
                         meta_optimizer.zero_grad()
                         loss.backward()
                         meta_optimizer.step()
-                        bar.suffix  = '({batch}/{size})  Total: {total:} | Loss: {loss:.4f}'.format(
-                                        batch=batch_idx + 1,
-                                        size=len(meta_loader),
-                                        total=bar.elapsed_td,
-                                        loss=loss)
-                        bar.next()
-                    bar.finish()
 
             
             #META testing with given knowledge on task
@@ -416,9 +351,6 @@ class Learner():
                     pass
         print("\n".join([str(acc_task[k]).format(".4f") for k in acc_task.keys()]) )    
         print(class_acc)
-        
-        with open(self.args.savepoint + "/meta_task_test_list_"+str(task_idx)+".pickle", 'wb') as handle:
-            pickle.dump(meta_task_test_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         return acc_task
         
@@ -452,10 +384,6 @@ class Learner():
             
         print(len(self._data_memory))
         return list(self._data_memory.astype("int32")), list(self._targets_memory.astype("int32"))
-
-    def save_checkpoint(self, state, is_best, checkpoint, filename):
-        if is_best:
-            torch.save(state, os.path.join(checkpoint, filename))
 
     def adjust_learning_rate(self, epoch):
         if epoch in self.args.schedule:

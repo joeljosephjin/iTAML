@@ -1,30 +1,10 @@
-import argparse
-import os
-import shutil
-import time
 import random
-import pickle
 import torch
-import pdb
-import torch.nn as nn
-import torch.nn.parallel
-import torch.backends.cudnn as cudnn
-import torch.optim as optim
 import torch.utils.data as data
-import torchvision.transforms as transforms
-import torchvision.datasets as datasets
-from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig
-
 import numpy as np
-import copy
+
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.autograd import Variable
-from torch.autograd import gradcheck
 import sys
-import random
 import collections
 
 from basic_net import *
@@ -32,9 +12,6 @@ from learner_task_itaml import Learner
 import incremental_dataloader as data
 
 class args:
-
-    checkpoint = "results/cifar100/meta_mnist_T5_47"
-    savepoint = "models/" + "/".join(checkpoint.split("/")[1:])
     data_path = "../Datasets/MNIST/"
     num_class = 10
     class_per_task = 2
@@ -44,7 +21,6 @@ class args:
     optimizer = 'sgd'
     
     epochs = 20
-    # lr = 0.1
     lr = 1e-4
     train_batch = 256
     test_batch = 256
@@ -59,9 +35,6 @@ class args:
     beta = 0.5
     r = 1
     
-state = {key:value for key, value in args.__dict__.items() if not key.startswith('__') and not callable(key)}
-print(state)
-
 # Use CUDA
 use_cuda = torch.cuda.is_available()
 seed = random.randint(1, 10000)
@@ -74,12 +47,7 @@ if use_cuda:
 
 
 def main():
-
     model = BasicNet1(args, 0).cuda() 
-
-
-    print('  Total params: %.2fM ' % (sum(p.numel() for p in model.parameters())/1000000.0))
-
 
     inc_dataset = data.IncrementalDataset(
                         dataset_name=args.dataset,
@@ -116,16 +84,12 @@ def main():
         print(inc_dataset.sample_per_task_testing)
         args.sample_per_task_testing = inc_dataset.sample_per_task_testing
         
-        
-        main_learner=Learner(model=model,args=args,trainloader=train_loader,
-                                testloader=test_loader, use_cuda=use_cuda, ses=ses)
-        
+        main_learner=Learner(model=model,args=args,trainloader=train_loader, testloader=test_loader, use_cuda=use_cuda, ses=ses)
         
         main_learner.learn()
         memory = inc_dataset.get_memory(memory, for_memory)
 
         acc_task = main_learner.meta_test(main_learner.best_model, memory, inc_dataset)
 
-        time.sleep(5)
 if __name__ == '__main__':
     main()
