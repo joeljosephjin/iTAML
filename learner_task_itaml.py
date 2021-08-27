@@ -133,7 +133,7 @@ class Learner():
         
         self.train_acc = sum(losses)/len(losses)
         top1_avg = sum(top1)/len(top1)
-        self.train_loss,self.train_acc, top1_avg
+        self.train_loss, self.train_acc, top1_avg
 
     def test(self, model):
 
@@ -148,7 +148,6 @@ class Learner():
         ai = 0
         bi = self.args.class_per_task*(self.args.sess+1)
         
-        end = time.time()
         for batch_idx, (inputs, targets) in enumerate(self.testloader):
             # measure data loading time
             targets_one_hot = torch.FloatTensor(inputs.shape[0], self.args.num_class)
@@ -184,7 +183,7 @@ class Learner():
                         class_acc[key] = 1
                         
         self.test_loss= sum(losses)/len(losses); self.test_acc= sum(top1)/len(top1)
-            
+
         acc_task = {}
         for i in range(self.args.sess+1):
             acc_task[i] = 0
