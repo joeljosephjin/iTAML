@@ -44,53 +44,49 @@ torch.manual_seed(seed)
 if use_cuda:
     torch.cuda.manual_seed_all(seed)
 
+model = BasicNet1(args, 0).cuda() 
 
-def main():
-    model = BasicNet1(args, 0).cuda() 
-
-    inc_dataset = data.IncrementalDataset(
-                        dataset_name=args.dataset,
-                        args = args,
-                        random_order=args.random_classes,
-                        shuffle=True,
-                        seed=1,
-                        batch_size=args.train_batch,
-                        workers=args.workers,
-                        validation_split=args.validation,
-                        increment=args.class_per_task,
-                    )
-        
-    start_sess = int(sys.argv[1])
-    memory = None
+inc_dataset = data.IncrementalDataset(
+                    dataset_name=args.dataset,
+                    args = args,
+                    random_order=args.random_classes,
+                    shuffle=True,
+                    seed=1,
+                    batch_size=args.train_batch,
+                    workers=args.workers,
+                    validation_split=args.validation,
+                    increment=args.class_per_task,
+                )
     
-    for ses in range(start_sess, args.num_task):
-        args.sess=ses 
-        
-        if(ses==0):
-            args.epochs = 5
-        if(ses==4):
-            args.lr = 0.05
-        if(start_sess==ses and start_sess!=0): 
-            inc_dataset._current_task = ses
-            inc_dataset.sample_per_task_testing = sample_per_task_testing
-            args.sample_per_task_testing = sample_per_task_testing
-        
-        if ses>0: 
-            args.epochs = 20
-            
-        task_info, train_loader, val_loader, test_loader, for_memory = inc_dataset.new_task(memory)
+start_sess = int(sys.argv[1])
+memory = None
 
-        print('task_info:', task_info)
-        print('sample_per_task_testing:', inc_dataset.sample_per_task_testing)
-
-        args.sample_per_task_testing = inc_dataset.sample_per_task_testing
+for ses in range(start_sess, args.num_task):
+    args.sess=ses 
+    
+    if(ses==0):
+        args.epochs = 5
+    if(ses==4):
+        args.lr = 0.05
+    if(start_sess==ses and start_sess!=0): 
+        inc_dataset._current_task = ses
+        inc_dataset.sample_per_task_testing = sample_per_task_testing
+        args.sample_per_task_testing = sample_per_task_testing
+    
+    if ses>0: 
+        args.epochs = 20
         
-        main_learner=Learner(model=model,args=args,trainloader=train_loader, testloader=test_loader, use_cuda=use_cuda, ses=ses)
-        
-        main_learner.learn()
-        memory = inc_dataset.get_memory(memory, for_memory)
+    task_info, train_loader, val_loader, test_loader, for_memory = inc_dataset.new_task(memory)
 
-        acc_task = main_learner.meta_test(main_learner.best_model, memory, inc_dataset)
+    print('task_info:', task_info)
+    print('sample_per_task_testing:', inc_dataset.sample_per_task_testing)
 
-if __name__ == '__main__':
-    main()
+    args.sample_per_task_testing = inc_dataset.sample_per_task_testing
+    
+    main_learner=Learner(model=model,args=args,trainloader=train_loader, testloader=test_loader, use_cuda=use_cuda, ses=ses)
+    
+    main_learner.learn()
+    memory = inc_dataset.get_memory(memory, for_memory)
+
+    acc_task = main_learner.meta_test(main_learner.best_model, memory, inc_dataset)
+
