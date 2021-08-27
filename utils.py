@@ -1,7 +1,60 @@
 import math
 import torch
 from torch.optim.optimizer import Optimizer, required
+from torch import nn
+import torch.nn.functional as F
 
+
+# RPS Net Module
+class RPS_net_mlp(nn.Module):
+
+        def __init__(self):
+            super(RPS_net_mlp, self).__init__()
+            self.init()
+
+        def init(self):
+            """Initialize all parameters"""
+            self.mlp1 = nn.Linear(784, 400)
+            self.mlp2 = nn.Linear(400, 400)
+            self.relu = nn.ReLU()
+            self.fc = nn.Linear(400, 10, bias=False)
+            self.sigmoid = nn.Sigmoid()
+            
+            self.cuda()
+
+        def forward(self, x):
+
+            x = x.view(-1, 784)
+            y = self.mlp1(x)
+            y = F.relu(y)
+            
+            y = self.mlp2(y)
+            y = F.relu(y)
+
+            x1 = self.fc(y)
+            x2 = self.fc(y)
+            
+            return x2, x1
+
+
+# Accuracy
+def accuracy(output, target, topk=(1,)):
+    """Computes the accuracy over the k top predictions for the specified values of k"""
+
+    maxk = max(topk)
+    batch_size = target.size(0)
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+
+    res = []
+    for k in topk:
+        correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+        res.append(correct_k.mul_(100.0 / batch_size))
+    return res
+
+# RAdam Optimizer
 class RAdam(Optimizer):
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):

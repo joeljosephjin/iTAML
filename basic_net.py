@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
-from resnet import RPS_net_mlp
+from utils import RPS_net_mlp
 
 class BasicNet1(nn.Module):
 

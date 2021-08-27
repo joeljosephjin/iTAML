@@ -23,7 +23,7 @@ class args:
     lr = 1e-4
     train_batch = 256
     test_batch = 256
-    workers = 16
+    workers = 2
     sess = 0
     schedule = [5,10,15]
     gamma = 0.5

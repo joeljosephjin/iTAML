@@ -7,24 +7,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import copy
-from radam import *
-
-def accuracy(output, target, topk=(1,)):
-    """Computes the accuracy over the k top predictions for the specified values of k"""
-
-    maxk = max(topk)
-    batch_size = target.size(0)
-    _, pred = output.topk(maxk, 1, True, True)
-    pred = pred.t()
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
+from utils import *
 
 
-    res = []
-    for k in topk:
-        correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-        res.append(correct_k.mul_(100.0 / batch_size))
-    return res
-    
 class Learner():
     def __init__(self,model,args,trainloader,testloader, use_cuda, ses):
         self.model=model
