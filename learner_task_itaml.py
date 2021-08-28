@@ -264,32 +264,6 @@ class Learner():
                             else:
                                 class_acc[key] = 1
 
-
-#           META testing - no knowledge on task
-            meta_model.eval()   
-            for batch_idx, (inputs, targets) in enumerate(self.testloader):
-                if self.use_cuda:
-                    inputs, targets = inputs.cuda(), targets.cuda()
-                             
-                _, outputs = meta_model(inputs)
-                outputs_base, _ = self.model(inputs)
-
-                # task_ids = task_ids.detach().cpu()
-                outputs = outputs.detach().cpu()
-                outputs_base = outputs_base.detach().cpu()
-                
-                bs = inputs.size()[0]
-                for i,t in enumerate(list(range(bs))):
-                    j = batch_idx*self.args.test_batch + i
-                    output_base_max = []
-                    for si in range(self.args.sess+1):
-                        sj = outputs_base[i][si* self.args.class_per_task:(si+1)* self.args.class_per_task]
-                        sq = torch.max(sj)
-                        output_base_max.append(sq)
-                    
-                    # task_argmax = np.argsort(outputs[i][ai:bi])[-5:]
-                    # task_max = outputs[i][ai:bi][task_argmax]
-
             del meta_model
                                 
         acc_task = {}
