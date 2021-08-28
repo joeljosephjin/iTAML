@@ -205,9 +205,7 @@ class Learner():
         meta_task_test_list = {}
         for task_idx in range(self.args.sess+1):
             
-            memory_data, memory_target = memory
-            memory_data = np.array(memory_data, dtype="int32")
-            memory_target = np.array(memory_target, dtype="int32")
+            memory_data, memory_target = np.array(memory[0], dtype="int32"), np.array(memory[1], dtype="int32")
             
             mem_idx = np.where((memory_target>= task_idx*self.args.class_per_task) & (memory_target < (task_idx+1)*self.args.class_per_task))[0]
             meta_memory_data = memory_data[mem_idx]
@@ -217,9 +215,9 @@ class Learner():
             meta_loader = inc_dataset.get_custom_loader_idx(meta_memory_data, mode="train", batch_size=64)
 
             meta_optimizer = optim.Adam(meta_model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0, amsgrad=False)
-            
+
             meta_model.train()
-            
+
             ai = self.args.class_per_task*task_idx
             bi = self.args.class_per_task*(task_idx+1)
             bb = self.args.class_per_task*(self.args.sess+1)

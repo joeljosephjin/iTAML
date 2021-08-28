@@ -65,6 +65,7 @@ for ses in range(start_sess, args.num_task):
     args.sess=ses 
     
     if(ses==0):
+        # args.epochs = 5
         args.epochs = 5
     if(ses==4):
         args.lr = 0.05
@@ -74,7 +75,8 @@ for ses in range(start_sess, args.num_task):
         args.sample_per_task_testing = sample_per_task_testing
     
     if ses>0: 
-        args.epochs = 20
+        # args.epochs = 20
+        args.epochs = 5
         
     task_info, train_loader, val_loader, test_loader, for_memory = inc_dataset.new_task(memory)
 
@@ -86,6 +88,7 @@ for ses in range(start_sess, args.num_task):
     main_learner=Learner(model=model,args=args,trainloader=train_loader, testloader=test_loader, use_cuda=use_cuda, ses=ses)
     
     main_learner.learn()
+
     memory = inc_dataset.get_memory(memory, for_memory)
 
     acc_task = main_learner.meta_test(main_learner.best_model, memory, inc_dataset)
