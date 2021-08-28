@@ -37,8 +37,7 @@ class args:
     r = 1
     
 # Use CUDA
-seed = random.randint(1, 10000)
-seed = 2481 
+seed = 2481
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -49,7 +48,7 @@ model = BasicNet1(args, 0).to(device)
 
 inc_dataset = data.IncrementalDataset(
                     dataset_name=args.dataset,
-                    args = args,
+                    args=args,
                     random_order=args.random_classes,
                     shuffle=True,
                     seed=1,
@@ -63,17 +62,16 @@ start_sess = int(sys.argv[1])
 memory = None
 
 for ses in range(start_sess, args.num_task):
-    args.sess=ses 
+    args.sess=ses
     
     task_info, train_loader, val_loader, test_loader, for_memory = inc_dataset.new_task(memory)
+    memory = inc_dataset.get_memory(memory, for_memory)
 
     args.sample_per_task_testing = inc_dataset.sample_per_task_testing
     
-    main_learner=Learner(model=model,args=args,trainloader=train_loader,testloader=test_loader,ses=ses)
+    main_learner=Learner(model=model, args=args, trainloader=train_loader, testloader=test_loader, ses=ses)
     
     main_learner.learn()
-
-    memory = inc_dataset.get_memory(memory, for_memory)
 
     main_learner.meta_test(main_learner.model, memory, inc_dataset)
 

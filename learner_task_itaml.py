@@ -52,11 +52,10 @@ class Learner():
         bi = self.args.class_per_task*(1+self.args.sess)
         
         for batch_idx, (inputs, targets) in enumerate(self.trainloader):
-            sessions = []
-             
+
             targets_one_hot = torch.zeros(inputs.shape[0], bi).scatter_(1, targets[:,None], 1)
 
-            inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device),targets.to(self.device)
+            inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
             reptile_grads = {}            
             np_targets = targets.detach().cpu().numpy()
@@ -67,21 +66,17 @@ class Learner():
             model_base = copy.deepcopy(model)
             for task_idx in range(1+self.args.sess):
                 idx = np.where((np_targets>= task_idx*self.args.class_per_task) & (np_targets < (task_idx+1)*self.args.class_per_task))[0]
-                ai = self.args.class_per_task*task_idx
-                bi = self.args.class_per_task*(task_idx+1)
+                ai, bi = self.args.class_per_task*task_idx, self.args.class_per_task*(task_idx+1)
                 
                 ii = 0
                 if(len(idx)>0):
-                    sessions.append([task_idx, ii])
                     ii += 1
                     for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
                         p=copy.deepcopy(q)
                         
                     class_inputs = inputs[idx]
-                    class_targets_one_hot= targets_one_hot[idx]
+                    class_targets_one_hot = targets_one_hot[idx]
 
-                    self.args.r = 1
-                        
                     for kr in range(self.args.r):
                         _, class_outputs = model(class_inputs)
 
@@ -90,22 +85,21 @@ class Learner():
                         loss.backward()
                         self.optimizer.step()
 
-                    for i,p in enumerate(model.parameters()):
-                        if(num_updates==0):
-                            reptile_grads[i] = [p.data]
-                        else:
-                            reptile_grads[i].append(p.data)
-                    num_updates += 1
+                    # for i,p in enumerate(model.parameters()):
+                    #     if(num_updates==0):
+                    #         reptile_grads[i] = [p.data]
+                    #     else:
+                    #         reptile_grads[i].append(p.data)
+                    # num_updates += 1
             
-            for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
-                alpha = np.exp(-self.args.beta*((1.0*self.args.sess)/self.args.num_task))
-                ll = torch.stack(reptile_grads[i])
-                p.data = torch.mean(ll,0)*(alpha) + (1-alpha)* q.data  
+            # for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
+            #     alpha = np.exp(-self.args.beta*((1.0*self.args.sess)/self.args.num_task))
+            #     ll = torch.stack(reptile_grads[i])
+                # p.data = torch.mean(ll,0)*(alpha) + (1-alpha)* q.data  
                 
     def test(self, model):
         class_acc = {}
         
-        # switch to evaluate mode
         model.eval()
         
         for batch_idx, (inputs, targets) in enumerate(self.testloader):
@@ -127,9 +121,8 @@ class Learner():
                         class_acc[key] = 1
                         
         acc_task = self.get_task_accuracies(class_acc)
-
-        print("\n".join([str(acc_task[k]).format(".4f") for k in acc_task.keys()]) )    
-        print(class_acc)
+        print('test_task_accs:', acc_task)
+        print('test_class_accs:', class_acc)
 
     def meta_test(self, model, memory, inc_dataset):
         model.eval()
@@ -143,17 +136,13 @@ class Learner():
             mem_idx = np.where((memory_target>= task_idx*self.args.class_per_task) & (memory_target < (task_idx+1)*self.args.class_per_task))[0]
 
             meta_memory_data = memory_data[mem_idx]
+            meta_loader = inc_dataset.get_custom_loader_idx(meta_memory_data, mode="train", batch_size=64)
             
             meta_model = copy.deepcopy(base_model)
-            
-            meta_loader = inc_dataset.get_custom_loader_idx(meta_memory_data, mode="train", batch_size=64)
-
             meta_optimizer = optim.Adam(meta_model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0, amsgrad=False)
-
             meta_model.train()
 
-            ai = self.args.class_per_task*task_idx
-            bi = self.args.class_per_task*(task_idx+1)
+            ai, bi = self.args.class_per_task*task_idx, self.args.class_per_task*(task_idx+1)
             print("Training meta tasks:\t" , task_idx)
 
             #META testing with given knowledge on task
@@ -164,17 +153,17 @@ class Learner():
                 loader = inc_dataset.get_custom_loader_class([class_idx], mode="test", batch_size=10)
 
                 for batch_idx, (inputs, targets) in enumerate(loader):
-                    targets_task = targets-self.args.class_per_task*task_idx
+                    targets_task = targets - self.args.class_per_task * task_idx
 
                     inputs, targets_task = inputs.to(self.device), targets_task.to(self.device)
 
                     _, outputs = meta_model(inputs)
 
-                    pred = torch.argmax(outputs[:,ai:bi], 1, keepdim=False).view(1,-1)
+                    pred = torch.argmax(outputs[:, ai:bi], 1, keepdim=False).view(1,-1)
                     correct = pred.eq(targets_task.view(1, -1).expand_as(pred)).view(-1) 
 
                     for i,p in enumerate(pred.view(-1)):
-                        key = int(p.detach().cpu().numpy()) + self.args.class_per_task*task_idx
+                        key = int(p.detach().cpu().numpy()) + self.args.class_per_task * task_idx
                         if(correct[i]==1):
                             if(key in class_acc.keys()):
                                 class_acc[key] += 1
@@ -184,7 +173,6 @@ class Learner():
             del meta_model
                                 
         acc_task = self.get_task_accuracies(class_acc)
-
         print('meta_task_accs:', acc_task)
         print('meta_class_accs:', class_acc)
 
