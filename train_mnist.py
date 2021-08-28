@@ -19,11 +19,11 @@ class args:
     dataset = "mnist"
     optimizer = 'sgd'
     
-    epochs = 20
+    epochs = 5
     lr = 1e-4
     train_batch = 256
     test_batch = 256
-    workers = 2
+    workers = 16
     sess = 0
     schedule = [5,10,15]
     gamma = 0.5
@@ -64,19 +64,14 @@ memory = None
 for ses in range(start_sess, args.num_task):
     args.sess=ses 
     
-    if(ses==0):
-        # args.epochs = 5
-        args.epochs = 5
-    if(ses==4):
-        args.lr = 0.05
-    if(start_sess==ses and start_sess!=0): 
-        inc_dataset._current_task = ses
-        inc_dataset.sample_per_task_testing = sample_per_task_testing
-        args.sample_per_task_testing = sample_per_task_testing
-    
-    if ses>0: 
-        # args.epochs = 20
-        args.epochs = 5
+    # if(ses==0):
+    #     # args.epochs = 5
+    #     args.epochs = 5
+    # if(ses==4):
+    #     args.lr = 0.05
+    # if ses>0: 
+    #     # args.epochs = 20
+    #     args.epochs = 5
         
     task_info, train_loader, val_loader, test_loader, for_memory = inc_dataset.new_task(memory)
 

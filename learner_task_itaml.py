@@ -22,7 +22,7 @@ class Learner():
         self.testloader=testloader
         self.test_loss=0.0
         self.test_acc=0.0
-        self.train_loss, self.train_acc=0.0,0.0       
+        # self.train_loss, self.train_acc=0.0,0.0       
 
         self.ses = ses
         
@@ -44,17 +44,11 @@ class Learner():
     def learn(self):
         for epoch in range(0, self.args.epochs):
             self.adjust_learning_rate(epoch)
-            print('\nEpoch: [%d | %d] LR: %f Sess: %d' % (epoch + 1, self.args.epochs, self.state['lr'],self.args.sess))
+            print('\nEpoch: [%d | %d] LR: %f Sess: %d' % (epoch + 1, self.args.epochs, self.state['lr'], self.args.sess))
 
             self.train(self.model, epoch)
             self.test(self.model)
 
-            self.best_acc = max(self.test_acc, self.best_acc)
-        self.model = copy.deepcopy(self.best_model)
-        
-        print('Best acc:')
-        print(self.best_acc)
-    
     def train(self, model, epoch):
         model.train()
 
@@ -96,11 +90,8 @@ class Learner():
                     class_inputs = inputs[idx]
                     class_targets_one_hot= targets_one_hot[idx]
                     class_targets = targets[idx]
-                    
-                    if(self.args.sess==task_idx and self.args.sess==4 and self.args.dataset=="svhn"):
-                        self.args.r = 4
-                    else:
-                        self.args.r = 1
+
+                    self.args.r = 1
                         
                     for kr in range(self.args.r):
                         _, class_outputs = model(class_inputs)
@@ -130,9 +121,11 @@ class Learner():
             top1.append(prec1.item())
             top5.append(prec5.item())
         
-        self.train_acc = sum(losses)/len(losses)
+        # self.train_acc = sum(losses)/len(losses)
         top1_avg = sum(top1)/len(top1)
-        self.train_loss, self.train_acc, top1_avg
+        top5_avg = sum(top5)/len(top5)
+        print('top1_avg:', top1_avg, top5_avg)
+        # sum(losses)/len(losses), self.train_acc, top1_avg
 
     def test(self, model):
 
