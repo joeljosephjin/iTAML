@@ -174,8 +174,7 @@ class Learner():
                     correct = pred.eq(targets_task.view(1, -1).expand_as(pred)).view(-1) 
 
                     for i,p in enumerate(pred.view(-1)):
-                        key = int(p.detach().cpu().numpy())
-                        key = key + self.args.class_per_task*task_idx
+                        key = int(p.detach().cpu().numpy()) + self.args.class_per_task*task_idx
                         if(correct[i]==1):
                             if(key in class_acc.keys()):
                                 class_acc[key] += 1
