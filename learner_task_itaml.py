@@ -73,7 +73,6 @@ class Learner():
     
             if self.use_cuda:
                 inputs, targets_one_hot, targets = inputs.cuda(), targets_one_hot.cuda(),targets.cuda()
-            inputs, targets_one_hot, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets_one_hot),torch.autograd.Variable(targets)
 
             reptile_grads = {}            
             np_targets = targets.detach().cpu().numpy()
@@ -220,7 +219,6 @@ class Learner():
 
             ai = self.args.class_per_task*task_idx
             bi = self.args.class_per_task*(task_idx+1)
-            bb = self.args.class_per_task*(self.args.sess+1)
             print("Training meta tasks:\t" , task_idx)
                 
             #META training
