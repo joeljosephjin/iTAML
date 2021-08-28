@@ -19,8 +19,8 @@ class args:
     dataset = "mnist"
     optimizer = 'sgd'
     
-    # epochs = 5
-    epochs = 20
+    epochs = 5
+    # epochs = 20
     # lr = 1e-4
     lr = 0.05
     train_batch = 256

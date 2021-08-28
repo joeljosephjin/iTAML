@@ -126,14 +126,7 @@ class Learner():
                     else:
                         class_acc[key] = 1
                         
-        acc_task = {}
-        for i in range(self.args.sess+1):
-            acc_task[i] = 0
-            for j in range(self.args.class_per_task):
-                try:
-                    acc_task[i] += class_acc[i*self.args.class_per_task+j]/self.args.sample_per_task_testing[i] * 100
-                except:
-                    pass
+        acc_task = self.get_task_accuracies(class_acc)
 
         print("\n".join([str(acc_task[k]).format(".4f") for k in acc_task.keys()]) )    
         print(class_acc)
@@ -141,7 +134,6 @@ class Learner():
     def meta_test(self, model, memory, inc_dataset):
         model.eval()
         
-        meta_models = []   
         base_model = copy.deepcopy(model)
         class_acc = {}
         for task_idx in range(self.args.sess+1):
@@ -163,20 +155,6 @@ class Learner():
             ai = self.args.class_per_task*task_idx
             bi = self.args.class_per_task*(task_idx+1)
             print("Training meta tasks:\t" , task_idx)
-                
-            #META training
-            # for batch_idx, (inputs, targets) in enumerate(meta_loader):
-            #     targets_one_hot = torch.zeros(targets.shape[0], (task_idx+1)*self.args.class_per_task).scatter_(1, targets[:,None], 1)
-
-            #     inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
-
-            #     _, outputs = meta_model(inputs)
-
-            #     loss = F.binary_cross_entropy_with_logits(outputs[:, ai:bi], targets_one_hot[:, ai:bi])
-
-            #     meta_optimizer.zero_grad()
-            #     loss.backward()
-            #     meta_optimizer.step()
 
             #META testing with given knowledge on task
             meta_model.eval()   
@@ -193,7 +171,6 @@ class Learner():
                     _, outputs = meta_model(inputs)
 
                     pred = torch.argmax(outputs[:,ai:bi], 1, keepdim=False).view(1,-1)
-
                     correct = pred.eq(targets_task.view(1, -1).expand_as(pred)).view(-1) 
 
                     for i,p in enumerate(pred.view(-1)):
@@ -207,14 +184,7 @@ class Learner():
 
             del meta_model
                                 
-        acc_task = {}
-        for i in range(self.args.sess+1):
-            acc_task[i] = 0
-            for j in range(self.args.class_per_task):
-                try:
-                    acc_task[i] += class_acc[i*self.args.class_per_task+j]/self.args.sample_per_task_testing[i] * 100
-                except:
-                    pass
+        acc_task = self.get_task_accuracies(class_acc)
 
         print("\n".join([str(acc_task[k]).format(".4f") for k in acc_task.keys()]) )    
         print(class_acc)
@@ -226,3 +196,14 @@ class Learner():
             self.state['lr'] *= self.args.gamma
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = self.state['lr']
+
+    def get_task_accuracies(self, class_acc):
+        acc_task = {}
+        for i in range(self.args.sess+1):
+            acc_task[i] = 0
+            for j in range(self.args.class_per_task):
+                try:
+                    acc_task[i] += class_acc[i*self.args.class_per_task+j]/self.args.sample_per_task_testing[i] * 100
+                except:
+                    pass
+        return acc_task
