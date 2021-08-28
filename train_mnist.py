@@ -37,14 +37,12 @@ class args:
     r = 1
     
 # Use CUDA
-# use_cuda = torch.cuda.is_available()
 seed = random.randint(1, 10000)
 seed = 2481 
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-# if use_cuda:
 torch.cuda.manual_seed_all(seed)
 
 model = BasicNet1(args, 0).to(device)
