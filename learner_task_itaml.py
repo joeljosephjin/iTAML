@@ -60,9 +60,10 @@ class Learner():
         for batch_idx, (inputs, targets) in enumerate(self.trainloader):
             sessions = []
              
-            targets_one_hot = torch.FloatTensor(inputs.shape[0], bi)
-            targets_one_hot.zero_()
-            targets_one_hot.scatter_(1, targets[:,None], 1)
+            # targets_one_hot = torch.FloatTensor(inputs.shape[0], bi)
+            targets_one_hot = torch.zeros(inputs.shape[0], bi).scatter_(1, targets[:,None], 1)
+            # targets_one_hot.zero_()
+            # targets_one_hot
 
             inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device),targets.to(self.device)
 
@@ -96,7 +97,7 @@ class Learner():
 
                         # class_tar_ce=class_targets_one_hot.clone()
                         # class_pre_ce=class_outputs.clone()
-                        loss = F.binary_cross_entropy_with_logits(class_pre_ce[:, ai:bi], class_targets_one_hot[:, ai:bi]) 
+                        loss = F.binary_cross_entropy_with_logits(class_outputs[:, ai:bi], class_targets_one_hot[:, ai:bi]) 
                         self.optimizer.zero_grad()
                         loss.backward()
                         self.optimizer.step()
@@ -147,10 +148,10 @@ class Learner():
             
             inputs, targets_one_hot,targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
-            outputs2, outputs = model(inputs)
-            loss = F.binary_cross_entropy_with_logits(outputs[ai:bi], targets_one_hot[ai:bi])
+            outputs2, _ = model(inputs)
+            # loss = F.binary_cross_entropy_with_logits(outputs[ai:bi], targets_one_hot[ai:bi])
                     
-            prec1, prec5 = accuracy(outputs2.data[:,0:self.args.class_per_task*(1+self.args.sess)], targets.cuda().data, topk=(1, 1))
+            # prec1, prec5 = accuracy(outputs2.data[:,0:self.args.class_per_task*(1+self.args.sess)], targets.cuda().data, topk=(1, 1))
 
 
             # losses.append(loss.item())
@@ -159,7 +160,7 @@ class Learner():
             
             pred = torch.argmax(outputs2[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False).view(1,-1)
             correct = pred.eq(targets.view(1, -1).expand_as(pred)).view(-1) 
-            correct_k = float(torch.sum(correct).detach().cpu().numpy())
+            # correct_k = float(torch.sum(correct).detach().cpu().numpy())
 
             for i,p in enumerate(pred.view(-1)):
                 key = int(p.detach().cpu().numpy())
@@ -241,7 +242,7 @@ class Learner():
                     pred = pred.view(1,-1)
                     correct = pred.eq(targets_task.view(1, -1).expand_as(pred)).view(-1) 
 
-                    correct_k = float(torch.sum(correct).detach().cpu().numpy())
+                    # correct_k = float(torch.sum(correct).detach().cpu().numpy())
 
                     for i,p in enumerate(pred.view(-1)):
                         key = int(p.detach().cpu().numpy())
