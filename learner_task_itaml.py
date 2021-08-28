@@ -40,6 +40,7 @@ class Learner():
     def learn(self):
         for epoch in range(0, self.args.epochs):
             self.adjust_learning_rate(epoch)
+
             print('\nEpoch: [%d | %d] LR: %f Sess: %d' % (epoch+1, self.args.epochs, self.state['lr'], self.args.sess))
 
             self.train(self.model, epoch)
@@ -102,24 +103,15 @@ class Learner():
                 p.data = torch.mean(ll,0)*(alpha) + (1-alpha)* q.data  
                 
     def test(self, model):
-
-        losses = []
         class_acc = {}
-        
         
         # switch to evaluate mode
         model.eval()
-        ai = 0
-        bi = self.args.class_per_task*(self.args.sess+1)
         
         for batch_idx, (inputs, targets) in enumerate(self.testloader):
-            # measure data loading time
-            targets_one_hot = torch.FloatTensor(inputs.shape[0], self.args.num_class)
-            targets_one_hot.zero_()
-            targets_one_hot.scatter_(1, targets[:,None], 1)
-            target_set = np.unique(targets)
+            targets_one_hot = torch.zeros(inputs.shape[0], self.args.num_class).scatter_(1, targets[:,None], 1)
             
-            inputs, targets_one_hot,targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
+            inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
             outputs2, _ = model(inputs)
             
@@ -157,8 +149,8 @@ class Learner():
             memory_data, memory_target = np.array(memory[0], dtype="int32"), np.array(memory[1], dtype="int32")
             
             mem_idx = np.where((memory_target>= task_idx*self.args.class_per_task) & (memory_target < (task_idx+1)*self.args.class_per_task))[0]
+
             meta_memory_data = memory_data[mem_idx]
-            meta_memory_target = memory_target[mem_idx]
             
             meta_model = copy.deepcopy(base_model)
             
@@ -173,25 +165,24 @@ class Learner():
             print("Training meta tasks:\t" , task_idx)
                 
             #META training
-            # if(self.args.sess!=0):
-            # if True:
-            for batch_idx, (inputs, targets) in enumerate(meta_loader):
-                targets_one_hot = torch.zeros(targets.shape[0], (task_idx+1)*self.args.class_per_task).scatter_(1, targets[:,None], 1)
+            # for batch_idx, (inputs, targets) in enumerate(meta_loader):
+            #     targets_one_hot = torch.zeros(targets.shape[0], (task_idx+1)*self.args.class_per_task).scatter_(1, targets[:,None], 1)
 
-                inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
+            #     inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
-                _, outputs = meta_model(inputs)
+            #     _, outputs = meta_model(inputs)
 
-                loss = F.binary_cross_entropy_with_logits(outputs[:, ai:bi], targets_one_hot[:, ai:bi])
+            #     loss = F.binary_cross_entropy_with_logits(outputs[:, ai:bi], targets_one_hot[:, ai:bi])
 
-                meta_optimizer.zero_grad()
-                loss.backward()
-                meta_optimizer.step()
+            #     meta_optimizer.zero_grad()
+            #     loss.backward()
+            #     meta_optimizer.step()
 
             #META testing with given knowledge on task
             meta_model.eval()   
             for cl in range(self.args.class_per_task):
                 class_idx = cl + self.args.class_per_task*task_idx
+
                 loader = inc_dataset.get_custom_loader_class([class_idx], mode="test", batch_size=10)
 
                 for batch_idx, (inputs, targets) in enumerate(loader):
@@ -201,8 +192,8 @@ class Learner():
 
                     _, outputs = meta_model(inputs)
 
-                    pred = torch.argmax(outputs[:,ai:bi], 1, keepdim=False)
-                    pred = pred.view(1,-1)
+                    pred = torch.argmax(outputs[:,ai:bi], 1, keepdim=False).view(1,-1)
+
                     correct = pred.eq(targets_task.view(1, -1).expand_as(pred)).view(-1) 
 
                     for i,p in enumerate(pred.view(-1)):
