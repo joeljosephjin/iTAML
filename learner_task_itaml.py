@@ -186,11 +186,9 @@ class Learner():
                                 
         acc_task = self.get_task_accuracies(class_acc)
 
-        print("\n".join([str(acc_task[k]).format(".4f") for k in acc_task.keys()]) )    
-        print(class_acc)
+        print('meta_task_accs:', acc_task)
+        print('meta_class_accs:', class_acc)
 
-        return acc_task
-        
     def adjust_learning_rate(self, epoch):
         if epoch in self.args.schedule:
             self.state['lr'] *= self.args.gamma
