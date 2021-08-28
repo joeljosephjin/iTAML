@@ -13,15 +13,14 @@ from utils import *
 class Learner():
     def __init__(self,model,args,trainloader,testloader, use_cuda, ses):
         self.model=model
-        self.best_model=model
         self.args=args
         self.trainloader=trainloader 
         self.use_cuda=use_cuda
         self.state= {key:value for key, value in self.args.__dict__.items() if not key.startswith('__') and not callable(key)} 
         self.best_acc = 0 
         self.testloader=testloader
-        self.test_loss=0.0
-        self.test_acc=0.0
+        # self.test_loss=0.0
+        # self.test_acc=0.0
         # self.train_loss, self.train_acc=0.0,0.0       
 
         self.ses = ses
@@ -44,7 +43,7 @@ class Learner():
     def learn(self):
         for epoch in range(0, self.args.epochs):
             self.adjust_learning_rate(epoch)
-            print('\nEpoch: [%d | %d] LR: %f Sess: %d' % (epoch + 1, self.args.epochs, self.state['lr'], self.args.sess))
+            print('\nEpoch: [%d | %d] LR: %f Sess: %d' % (epoch+1, self.args.epochs, self.state['lr'], self.args.sess))
 
             self.train(self.model, epoch)
             self.test(self.model)
@@ -52,9 +51,9 @@ class Learner():
     def train(self, model, epoch):
         model.train()
 
-        losses = []
-        top1 = []
-        top5 = []
+        # losses = []
+        # top1 = []
+        # top5 = []
         
         bi = self.args.class_per_task*(1+self.args.sess)
         
@@ -116,15 +115,15 @@ class Learner():
                 p.data = torch.mean(ll,0)*(alpha) + (1-alpha)* q.data  
                 
             # measure accuracy and record loss
-            prec1, prec5 = accuracy(output=outputs2.data[:,0:bi], target=targets.cuda().data, topk=(1, 1))
-            losses.append(loss.item())
-            top1.append(prec1.item())
-            top5.append(prec5.item())
+            # prec1, prec5 = accuracy(output=outputs2.data[:,0:bi], target=targets.cuda().data, topk=(1, 1))
+            # losses.append(loss.item())
+            # top1.append(prec1.item())
+            # top5.append(prec5.item())
         
         # self.train_acc = sum(losses)/len(losses)
-        top1_avg = sum(top1)/len(top1)
-        top5_avg = sum(top5)/len(top5)
-        print('top1_avg:', top1_avg, top5_avg)
+        # top1_avg = sum(top1)/len(top1)
+        # top5_avg = sum(top5)/len(top5)
+        # print('top1_avg:', top1_avg, top5_avg)
         # sum(losses)/len(losses), self.train_acc, top1_avg
 
     def test(self, model):
@@ -157,9 +156,9 @@ class Learner():
             prec1, prec5 = accuracy(outputs2.data[:,0:self.args.class_per_task*(1+self.args.sess)], targets.cuda().data, topk=(1, 1))
 
 
-            losses.append(loss.item())
-            top1.append(prec1.item())
-            top5.append(prec5.item())
+            # losses.append(loss.item())
+            # top1.append(prec1.item())
+            # top5.append(prec5.item())
             
             pred = torch.argmax(outputs2[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False)
             pred = pred.view(1,-1)
@@ -174,7 +173,7 @@ class Learner():
                     else:
                         class_acc[key] = 1
                         
-        self.test_loss= sum(losses)/len(losses); self.test_acc= sum(top1)/len(top1)
+        # self.test_loss= sum(losses)/len(losses); self.test_acc= sum(top1)/len(top1)
 
         acc_task = {}
         for i in range(self.args.sess+1):
@@ -194,7 +193,6 @@ class Learner():
         meta_models = []   
         base_model = copy.deepcopy(model)
         class_acc = {}
-        meta_task_test_list = {}
         for task_idx in range(self.args.sess+1):
             
             memory_data, memory_target = np.array(memory[0], dtype="int32"), np.array(memory[1], dtype="int32")
@@ -237,7 +235,6 @@ class Learner():
                         loss.backward()
                         meta_optimizer.step()
 
-            
             #META testing with given knowledge on task
             meta_model.eval()   
             for cl in range(self.args.class_per_task):
@@ -276,10 +273,8 @@ class Learner():
                              
                 _, outputs = meta_model(inputs)
                 outputs_base, _ = self.model(inputs)
-                task_ids = outputs
 
-                task_ids = task_ids.detach().cpu()
-                outputs = outputs.detach().cpu()
+                # task_ids = task_ids.detach().cpu()
                 outputs = outputs.detach().cpu()
                 outputs_base = outputs_base.detach().cpu()
                 
@@ -292,13 +287,9 @@ class Learner():
                         sq = torch.max(sj)
                         output_base_max.append(sq)
                     
-                    task_argmax = np.argsort(outputs[i][ai:bi])[-5:]
-                    task_max = outputs[i][ai:bi][task_argmax]
-                    
-                    if ( j not in meta_task_test_list.keys()):
-                        meta_task_test_list[j] = [[task_argmax,task_max, output_base_max,targets[i]]]
-                    else:
-                        meta_task_test_list[j].append([task_argmax,task_max, output_base_max,targets[i]])
+                    # task_argmax = np.argsort(outputs[i][ai:bi])[-5:]
+                    # task_max = outputs[i][ai:bi][task_argmax]
+
             del meta_model
                                 
         acc_task = {}
@@ -314,37 +305,6 @@ class Learner():
 
         return acc_task
         
-
-    def get_memory(self, memory, for_memory, seed=1):
-        random.seed(seed)
-        memory_per_task = self.args.memory // ((self.args.sess+1)*self.args.class_per_task)
-        self._data_memory, self._targets_memory = np.array([]), np.array([])
-        mu = 1
-        
-        #update old memory
-        if(memory is not None):
-            data_memory, targets_memory = memory
-            data_memory = np.array(data_memory, dtype="int32")
-            targets_memory = np.array(targets_memory, dtype="int32")
-            for class_idx in range(self.args.class_per_task*(self.args.sess)):
-                idx = np.where(targets_memory==class_idx)[0][:memory_per_task]
-                self._data_memory = np.concatenate([self._data_memory, np.tile(data_memory[idx], (mu,))   ])
-                self._targets_memory = np.concatenate([self._targets_memory, np.tile(targets_memory[idx], (mu,))    ])
-                
-                
-        #add new classes to the memory
-        new_indices, new_targets = for_memory
-
-        new_indices = np.array(new_indices, dtype="int32")
-        new_targets = np.array(new_targets, dtype="int32")
-        for class_idx in range(self.args.class_per_task*(self.args.sess),self.args.class_per_task*(1+self.args.sess)):
-            idx = np.where(new_targets==class_idx)[0][:memory_per_task]
-            self._data_memory = np.concatenate([self._data_memory, np.tile(new_indices[idx],(mu,))   ])
-            self._targets_memory = np.concatenate([self._targets_memory, np.tile(new_targets[idx],(mu,))    ])
-            
-        print(len(self._data_memory))
-        return list(self._data_memory.astype("int32")), list(self._targets_memory.astype("int32"))
-
     def adjust_learning_rate(self, epoch):
         if epoch in self.args.schedule:
             self.state['lr'] *= self.args.gamma
