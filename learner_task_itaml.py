@@ -95,7 +95,7 @@ class Learner():
             # for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
             #     alpha = np.exp(-self.args.beta*((1.0*self.args.sess)/self.args.num_task))
             #     ll = torch.stack(reptile_grads[i])
-                # p.data = torch.mean(ll,0)*(alpha) + (1-alpha)* q.data  
+            #     p.data = torch.mean(ll,0)*(alpha) + (1-alpha)* q.data  
                 
     def test(self, model):
         class_acc = {}
