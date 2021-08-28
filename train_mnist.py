@@ -41,10 +41,11 @@ seed = 2481
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 if use_cuda:
     torch.cuda.manual_seed_all(seed)
 
-model = BasicNet1(args, 0).cuda()
+model = BasicNet1(args, 0).to(device)
 
 inc_dataset = data.IncrementalDataset(
                     dataset_name=args.dataset,
@@ -68,7 +69,7 @@ for ses in range(start_sess, args.num_task):
 
     args.sample_per_task_testing = inc_dataset.sample_per_task_testing
     
-    main_learner=Learner(model=model,args=args,trainloader=train_loader,testloader=test_loader,use_cuda=use_cuda,ses=ses)
+    main_learner=Learner(model=model,args=args,trainloader=train_loader,testloader=test_loader,ses=ses)
     
     main_learner.learn()
 

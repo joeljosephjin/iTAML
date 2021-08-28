@@ -11,11 +11,11 @@ from utils import *
 
 
 class Learner():
-    def __init__(self,model,args,trainloader,testloader, use_cuda, ses):
+    def __init__(self, model, args, trainloader, testloader, ses):
         self.model=model
         self.args=args
         self.trainloader=trainloader 
-        self.use_cuda=use_cuda
+        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.state= {key:value for key, value in self.args.__dict__.items() if not key.startswith('__') and not callable(key)} 
         self.best_acc = 0 
         self.testloader=testloader
@@ -63,9 +63,8 @@ class Learner():
             targets_one_hot = torch.FloatTensor(inputs.shape[0], bi)
             targets_one_hot.zero_()
             targets_one_hot.scatter_(1, targets[:,None], 1)
-    
-            if self.use_cuda:
-                inputs, targets_one_hot, targets = inputs.cuda(), targets_one_hot.cuda(),targets.cuda()
+
+            inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device),targets.to(self.device)
 
             reptile_grads = {}            
             np_targets = targets.detach().cpu().numpy()
@@ -88,16 +87,16 @@ class Learner():
                         
                     class_inputs = inputs[idx]
                     class_targets_one_hot= targets_one_hot[idx]
-                    class_targets = targets[idx]
+                    # class_targets = targets[idx]
 
                     self.args.r = 1
                         
                     for kr in range(self.args.r):
                         _, class_outputs = model(class_inputs)
 
-                        class_tar_ce=class_targets_one_hot.clone()
-                        class_pre_ce=class_outputs.clone()
-                        loss = F.binary_cross_entropy_with_logits(class_pre_ce[:, ai:bi], class_tar_ce[:, ai:bi]) 
+                        # class_tar_ce=class_targets_one_hot.clone()
+                        # class_pre_ce=class_outputs.clone()
+                        loss = F.binary_cross_entropy_with_logits(class_pre_ce[:, ai:bi], class_targets_one_hot[:, ai:bi]) 
                         self.optimizer.zero_grad()
                         loss.backward()
                         self.optimizer.step()
@@ -129,8 +128,8 @@ class Learner():
     def test(self, model):
 
         losses = []
-        top1 = []
-        top5 = []
+        # top1 = []
+        # top5 = []
         class_acc = {}
         
         
@@ -146,9 +145,7 @@ class Learner():
             targets_one_hot.scatter_(1, targets[:,None], 1)
             target_set = np.unique(targets)
             
-            if self.use_cuda:
-                inputs, targets_one_hot,targets = inputs.cuda(), targets_one_hot.cuda(),targets.cuda()
-            inputs, targets_one_hot, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets_one_hot) ,torch.autograd.Variable(targets)
+            inputs, targets_one_hot,targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
             outputs2, outputs = model(inputs)
             loss = F.binary_cross_entropy_with_logits(outputs[ai:bi], targets_one_hot[ai:bi])
@@ -160,8 +157,7 @@ class Learner():
             # top1.append(prec1.item())
             # top5.append(prec5.item())
             
-            pred = torch.argmax(outputs2[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False)
-            pred = pred.view(1,-1)
+            pred = torch.argmax(outputs2[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False).view(1,-1)
             correct = pred.eq(targets.view(1, -1).expand_as(pred)).view(-1) 
             correct_k = float(torch.sum(correct).detach().cpu().numpy())
 
@@ -200,6 +196,7 @@ class Learner():
             mem_idx = np.where((memory_target>= task_idx*self.args.class_per_task) & (memory_target < (task_idx+1)*self.args.class_per_task))[0]
             meta_memory_data = memory_data[mem_idx]
             meta_memory_target = memory_target[mem_idx]
+            
             meta_model = copy.deepcopy(base_model)
             
             meta_loader = inc_dataset.get_custom_loader_idx(meta_memory_data, mode="train", batch_size=64)
@@ -214,26 +211,18 @@ class Learner():
                 
             #META training
             if(self.args.sess!=0):
-                for ep in range(1):
-                    for batch_idx, (inputs, targets) in enumerate(meta_loader):
-                        targets_one_hot = torch.FloatTensor(inputs.shape[0], (task_idx+1)*self.args.class_per_task)
-                        targets_one_hot.zero_()
-                        targets_one_hot.scatter_(1, targets[:,None], 1)
-                        target_set = np.unique(targets)
+                for batch_idx, (inputs, targets) in enumerate(meta_loader):
+                    targets_one_hot = torch.zeros(targets.shape[0], (task_idx+1)*self.args.class_per_task).scatter_(1, targets[:,None], 1)
 
-                        if self.use_cuda:
-                            inputs, targets_one_hot, targets = inputs.cuda(), targets_one_hot.cuda(),targets.cuda()
+                    inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
-                        _, outputs = meta_model(inputs)
-                        class_pre_ce=outputs.clone()
-                        class_pre_ce = class_pre_ce[:, ai:bi]
-                        class_tar_ce=targets_one_hot.clone()
+                    _, outputs = meta_model(inputs)
 
-                        loss = F.binary_cross_entropy_with_logits(class_pre_ce, class_tar_ce[:, ai:bi])
+                    loss = F.binary_cross_entropy_with_logits(outputs[:, ai:bi], targets_one_hot[:, ai:bi])
 
-                        meta_optimizer.zero_grad()
-                        loss.backward()
-                        meta_optimizer.step()
+                    meta_optimizer.zero_grad()
+                    loss.backward()
+                    meta_optimizer.step()
 
             #META testing with given knowledge on task
             meta_model.eval()   
@@ -244,8 +233,7 @@ class Learner():
                 for batch_idx, (inputs, targets) in enumerate(loader):
                     targets_task = targets-self.args.class_per_task*task_idx
 
-                    if self.use_cuda:
-                        inputs, targets_task = inputs.cuda(),targets_task.cuda()
+                    inputs, targets_task = inputs.to(self.device), targets_task.to(self.device)
 
                     _, outputs = meta_model(inputs)
 
