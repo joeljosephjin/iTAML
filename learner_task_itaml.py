@@ -231,8 +231,7 @@ class Learner():
                         target_set = np.unique(targets)
 
                         if self.use_cuda:
-                            inputs, targets_one_hot,targets = inputs.cuda(), targets_one_hot.cuda(),targets.cuda()
-                        inputs, targets_one_hot, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets_one_hot) ,torch.autograd.Variable(targets)
+                            inputs, targets_one_hot, targets = inputs.cuda(), targets_one_hot.cuda(),targets.cuda()
 
                         _, outputs = meta_model(inputs)
                         class_pre_ce=outputs.clone()
@@ -257,13 +256,8 @@ class Learner():
 
                     if self.use_cuda:
                         inputs, targets_task = inputs.cuda(),targets_task.cuda()
-                    inputs, targets_task = torch.autograd.Variable(inputs), torch.autograd.Variable(targets_task)
 
                     _, outputs = meta_model(inputs)
-
-                    if self.use_cuda:
-                        inputs, targets = inputs.cuda(),targets_task.cuda()
-                    inputs, targets_task = torch.autograd.Variable(inputs), torch.autograd.Variable(targets_task)
 
                     pred = torch.argmax(outputs[:,ai:bi], 1, keepdim=False)
                     pred = pred.view(1,-1)
@@ -286,7 +280,6 @@ class Learner():
             for batch_idx, (inputs, targets) in enumerate(self.testloader):
                 if self.use_cuda:
                     inputs, targets = inputs.cuda(), targets.cuda()
-                inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
                              
                 _, outputs = meta_model(inputs)
                 outputs_base, _ = self.model(inputs)
