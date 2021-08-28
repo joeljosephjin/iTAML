@@ -173,19 +173,20 @@ class Learner():
             print("Training meta tasks:\t" , task_idx)
                 
             #META training
-            if(self.args.sess!=0):
-                for batch_idx, (inputs, targets) in enumerate(meta_loader):
-                    targets_one_hot = torch.zeros(targets.shape[0], (task_idx+1)*self.args.class_per_task).scatter_(1, targets[:,None], 1)
+            # if(self.args.sess!=0):
+            # if True:
+            for batch_idx, (inputs, targets) in enumerate(meta_loader):
+                targets_one_hot = torch.zeros(targets.shape[0], (task_idx+1)*self.args.class_per_task).scatter_(1, targets[:,None], 1)
 
-                    inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
+                inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
-                    _, outputs = meta_model(inputs)
+                _, outputs = meta_model(inputs)
 
-                    loss = F.binary_cross_entropy_with_logits(outputs[:, ai:bi], targets_one_hot[:, ai:bi])
+                loss = F.binary_cross_entropy_with_logits(outputs[:, ai:bi], targets_one_hot[:, ai:bi])
 
-                    meta_optimizer.zero_grad()
-                    loss.backward()
-                    meta_optimizer.step()
+                meta_optimizer.zero_grad()
+                loss.backward()
+                meta_optimizer.step()
 
             #META testing with given knowledge on task
             meta_model.eval()   
@@ -223,6 +224,7 @@ class Learner():
                     acc_task[i] += class_acc[i*self.args.class_per_task+j]/self.args.sample_per_task_testing[i] * 100
                 except:
                     pass
+
         print("\n".join([str(acc_task[k]).format(".4f") for k in acc_task.keys()]) )    
         print(class_acc)
 
