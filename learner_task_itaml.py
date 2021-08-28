@@ -85,12 +85,12 @@ class Learner():
                         loss.backward()
                         self.optimizer.step()
 
-                    # for i,p in enumerate(model.parameters()):
-                    #     if(num_updates==0):
-                    #         reptile_grads[i] = [p.data]
-                    #     else:
-                    #         reptile_grads[i].append(p.data)
-                    # num_updates += 1
+            #         for i,p in enumerate(model.parameters()):
+            #             if(num_updates==0):
+            #                 reptile_grads[i] = [p.data]
+            #             else:
+            #                 reptile_grads[i].append(p.data)
+            #         num_updates += 1
             
             # for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
             #     alpha = np.exp(-self.args.beta*((1.0*self.args.sess)/self.args.num_task))
