@@ -19,9 +19,6 @@ class Learner():
         self.state= {key:value for key, value in self.args.__dict__.items() if not key.startswith('__') and not callable(key)} 
         self.best_acc = 0 
         self.testloader=testloader
-        # self.test_loss=0.0
-        # self.test_acc=0.0
-        # self.train_loss, self.train_acc=0.0,0.0       
 
         self.ses = ses
         
@@ -51,19 +48,12 @@ class Learner():
     def train(self, model, epoch):
         model.train()
 
-        # losses = []
-        # top1 = []
-        # top5 = []
-        
         bi = self.args.class_per_task*(1+self.args.sess)
         
         for batch_idx, (inputs, targets) in enumerate(self.trainloader):
             sessions = []
              
-            # targets_one_hot = torch.FloatTensor(inputs.shape[0], bi)
             targets_one_hot = torch.zeros(inputs.shape[0], bi).scatter_(1, targets[:,None], 1)
-            # targets_one_hot.zero_()
-            # targets_one_hot
 
             inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device),targets.to(self.device)
 
@@ -88,15 +78,12 @@ class Learner():
                         
                     class_inputs = inputs[idx]
                     class_targets_one_hot= targets_one_hot[idx]
-                    # class_targets = targets[idx]
 
                     self.args.r = 1
                         
                     for kr in range(self.args.r):
                         _, class_outputs = model(class_inputs)
 
-                        # class_tar_ce=class_targets_one_hot.clone()
-                        # class_pre_ce=class_outputs.clone()
                         loss = F.binary_cross_entropy_with_logits(class_outputs[:, ai:bi], class_targets_one_hot[:, ai:bi]) 
                         self.optimizer.zero_grad()
                         loss.backward()
@@ -114,23 +101,9 @@ class Learner():
                 ll = torch.stack(reptile_grads[i])
                 p.data = torch.mean(ll,0)*(alpha) + (1-alpha)* q.data  
                 
-            # measure accuracy and record loss
-            # prec1, prec5 = accuracy(output=outputs2.data[:,0:bi], target=targets.cuda().data, topk=(1, 1))
-            # losses.append(loss.item())
-            # top1.append(prec1.item())
-            # top5.append(prec5.item())
-        
-        # self.train_acc = sum(losses)/len(losses)
-        # top1_avg = sum(top1)/len(top1)
-        # top5_avg = sum(top5)/len(top5)
-        # print('top1_avg:', top1_avg, top5_avg)
-        # sum(losses)/len(losses), self.train_acc, top1_avg
-
     def test(self, model):
 
         losses = []
-        # top1 = []
-        # top5 = []
         class_acc = {}
         
         
@@ -149,18 +122,9 @@ class Learner():
             inputs, targets_one_hot,targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
             outputs2, _ = model(inputs)
-            # loss = F.binary_cross_entropy_with_logits(outputs[ai:bi], targets_one_hot[ai:bi])
-                    
-            # prec1, prec5 = accuracy(outputs2.data[:,0:self.args.class_per_task*(1+self.args.sess)], targets.cuda().data, topk=(1, 1))
-
-
-            # losses.append(loss.item())
-            # top1.append(prec1.item())
-            # top5.append(prec5.item())
             
             pred = torch.argmax(outputs2[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False).view(1,-1)
             correct = pred.eq(targets.view(1, -1).expand_as(pred)).view(-1) 
-            # correct_k = float(torch.sum(correct).detach().cpu().numpy())
 
             for i,p in enumerate(pred.view(-1)):
                 key = int(p.detach().cpu().numpy())
@@ -170,8 +134,6 @@ class Learner():
                     else:
                         class_acc[key] = 1
                         
-        # self.test_loss= sum(losses)/len(losses); self.test_acc= sum(top1)/len(top1)
-
         acc_task = {}
         for i in range(self.args.sess+1):
             acc_task[i] = 0
@@ -241,8 +203,6 @@ class Learner():
                     pred = torch.argmax(outputs[:,ai:bi], 1, keepdim=False)
                     pred = pred.view(1,-1)
                     correct = pred.eq(targets_task.view(1, -1).expand_as(pred)).view(-1) 
-
-                    # correct_k = float(torch.sum(correct).detach().cpu().numpy())
 
                     for i,p in enumerate(pred.view(-1)):
                         key = int(p.detach().cpu().numpy())
