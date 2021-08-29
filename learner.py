@@ -60,6 +60,7 @@ class Learner(LearnerUtils):
                 for key, p in self.model.named_parameters():
                     alpha = np.exp(-self.args.beta*((1.0*self.args.sess)/self.args.num_task))
                     ll = torch.stack(reptile_grads[key])
+                    # alpha = 0.5
                     p.copy_(torch.mean(ll,0)*(alpha) + (1-alpha)* p.data)
                 
     def test(self):

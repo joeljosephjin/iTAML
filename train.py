@@ -27,13 +27,14 @@ class args:
     workers = 16
     sess = 0
     schedule = [5,10,15]
-    gamma = 0.5
+    # gamma = 0.5
     random_classes = False
     validation = 0
     memory = 2000
     mu = 1
     beta = 0.5
-    r = 1
+    # beta = -5
+    r = 5
 
     start_sess = 0
     
