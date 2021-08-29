@@ -54,7 +54,6 @@ class Learner():
         for batch_idx, (inputs, targets) in enumerate(self.trainloader):
 
             targets_one_hot = torch.zeros(inputs.shape[0], bi).scatter_(1, targets[:,None], 1)
-
             inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
             reptile_grads = {}            
@@ -65,32 +64,30 @@ class Learner():
             
             model_base = copy.deepcopy(model)
             for task_idx in range(1+self.args.sess):
-                idx = np.where((np_targets>= task_idx*self.args.class_per_task) & (np_targets < (task_idx+1)*self.args.class_per_task))[0]
+                idx = np.where((np_targets >= task_idx*self.args.class_per_task) & (np_targets < (task_idx+1)*self.args.class_per_task))[0]
                 ai, bi = self.args.class_per_task*task_idx, self.args.class_per_task*(task_idx+1)
                 
-                ii = 0
-                if(len(idx)>0):
-                    ii += 1
-                    for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
-                        p=copy.deepcopy(q)
-                        
-                    class_inputs = inputs[idx]
-                    class_targets_one_hot = targets_one_hot[idx]
+                # for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
+                #     p=copy.deepcopy(q)
 
-                    for kr in range(self.args.r):
-                        _, class_outputs = model(class_inputs)
+                class_inputs = inputs[idx]
+                class_targets_one_hot = targets_one_hot[idx]
 
-                        loss = F.binary_cross_entropy_with_logits(class_outputs[:, ai:bi], class_targets_one_hot[:, ai:bi]) 
-                        self.optimizer.zero_grad()
-                        loss.backward()
-                        self.optimizer.step()
+                for kr in range(self.args.r):
+                    _, class_outputs = model(class_inputs)
 
-            #         for i,p in enumerate(model.parameters()):
-            #             if(num_updates==0):
-            #                 reptile_grads[i] = [p.data]
-            #             else:
-            #                 reptile_grads[i].append(p.data)
-            #         num_updates += 1
+                    loss = F.binary_cross_entropy_with_logits(class_outputs[:, ai:bi], class_targets_one_hot[:, ai:bi]) 
+                    self.optimizer.zero_grad()
+                    loss.backward()
+                    self.optimizer.step()
+
+            #     for i,p in enumerate(model.parameters()):
+            #         if(num_updates==0):
+            #             reptile_grads[i] = [p.data]
+            #         else:
+            #             reptile_grads[i].append(p.data)
+
+            #     num_updates += 1
             
             # for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
             #     alpha = np.exp(-self.args.beta*((1.0*self.args.sess)/self.args.num_task))
@@ -107,18 +104,12 @@ class Learner():
             
             inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
-            outputs2, _ = model(inputs)
-            
-            pred = torch.argmax(outputs2[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False).view(1,-1)
+            outputs, _ = model(inputs)
+
+            pred = torch.argmax(outputs[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False).view(1,-1)
             correct = pred.eq(targets.view(1, -1).expand_as(pred)).view(-1) 
 
-            for i,p in enumerate(pred.view(-1)):
-                key = int(p.detach().cpu().numpy())
-                if(correct[i]==1):
-                    if(key in class_acc.keys()):
-                        class_acc[key] += 1
-                    else:
-                        class_acc[key] = 1
+            class_acc = self.get_class_accs(pred, correct, class_acc)
                         
         acc_task = self.get_task_accuracies(class_acc)
         print('test_task_accs:', acc_task)
@@ -160,15 +151,9 @@ class Learner():
                     _, outputs = meta_model(inputs)
 
                     pred = torch.argmax(outputs[:, ai:bi], 1, keepdim=False).view(1,-1)
-                    correct = pred.eq(targets_task.view(1, -1).expand_as(pred)).view(-1) 
+                    correct = pred.eq(targets_task.view(1, -1).expand_as(pred)).view(-1)
 
-                    for i,p in enumerate(pred.view(-1)):
-                        key = int(p.detach().cpu().numpy()) + self.args.class_per_task * task_idx
-                        if(correct[i]==1):
-                            if(key in class_acc.keys()):
-                                class_acc[key] += 1
-                            else:
-                                class_acc[key] = 1
+                    class_acc = self.get_class_accs(pred, correct, class_acc, task_idx)
 
             del meta_model
                                 
@@ -181,6 +166,21 @@ class Learner():
             self.state['lr'] *= self.args.gamma
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = self.state['lr']
+
+    def get_class_accs(self, pred, correct, class_acc, task_idx=None):
+        for i,p in enumerate(pred.view(-1)):
+            key = int(p.detach().cpu().numpy())
+
+            if task_idx:
+                key += self.args.class_per_task * task_idx
+
+            if(correct[i]==1):
+                if(key in class_acc.keys()):
+                    class_acc[key] += 1
+                else:
+                    class_acc[key] = 1
+
+        return class_acc
 
     def get_task_accuracies(self, class_acc):
         acc_task = {}
