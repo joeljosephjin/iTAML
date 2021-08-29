@@ -60,7 +60,7 @@ class Learner():
             np_targets = targets.detach().cpu().numpy()
             num_updates = 0
             
-            outputs2, _ = model(inputs)
+            outputs2 = model(inputs)
             
             model_base = copy.deepcopy(model)
             for task_idx in range(1+self.args.sess):
@@ -74,7 +74,7 @@ class Learner():
                 class_targets_one_hot = targets_one_hot[idx]
 
                 for kr in range(self.args.r):
-                    _, class_outputs = model(class_inputs)
+                    class_outputs = model(class_inputs)
 
                     loss = F.binary_cross_entropy_with_logits(class_outputs[:, ai:bi], class_targets_one_hot[:, ai:bi]) 
                     self.optimizer.zero_grad()
@@ -104,7 +104,7 @@ class Learner():
             
             inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
 
-            outputs, _ = model(inputs)
+            outputs = model(inputs)
 
             pred = torch.argmax(outputs[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False).view(1,-1)
             correct = pred.eq(targets.view(1, -1).expand_as(pred)).view(-1) 
@@ -148,7 +148,7 @@ class Learner():
 
                     inputs, targets_task = inputs.to(self.device), targets_task.to(self.device)
 
-                    _, outputs = meta_model(inputs)
+                    outputs = meta_model(inputs)
 
                     pred = torch.argmax(outputs[:, ai:bi], 1, keepdim=False).view(1,-1)
                     correct = pred.eq(targets_task.view(1, -1).expand_as(pred)).view(-1)
