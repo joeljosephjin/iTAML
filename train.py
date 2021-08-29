@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import sys
 
-from utils import BasicNet
+from utils import RPS_net_mlp
 from learner_task_itaml import Learner
 import incremental_dataloader as data
 
@@ -17,11 +17,8 @@ class args:
     num_task = 5
     test_samples_per_class = 1000
     dataset = "mnist"
-    optimizer = 'sgd'
     
     epochs = 5
-    # epochs = 20
-    # lr = 1e-4
     lr = 0.05
     train_batch = 256
     test_batch = 256
@@ -45,21 +42,12 @@ torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-model = BasicNet().to(device)
+model = RPS_net_mlp().to(device)
 
-inc_dataset = data.IncrementalDataset(
-                    dataset_name=args.dataset,
-                    args=args,
-                    random_order=args.random_classes,
-                    shuffle=True,
-                    seed=1,
-                    batch_size=args.train_batch,
-                    workers=args.workers,
-                    validation_split=args.validation,
-                    increment=args.class_per_task,
-                )
+inc_dataset = data.IncrementalDataset(dataset_name=args.dataset, args=args, random_order=args.random_classes,
+                        shuffle=True, seed=1, batch_size=args.train_batch, workers=args.workers,
+                        validation_split=args.validation, increment=args.class_per_task)
     
-# start_sess = int(sys.argv[1])
 memory = None
 
 for ses in range(args.start_sess, args.num_task):
@@ -70,10 +58,8 @@ for ses in range(args.start_sess, args.num_task):
 
     args.sample_per_task_testing = inc_dataset.sample_per_task_testing
     
-    main_learner=Learner(model=model, args=args, trainloader=train_loader, testloader=test_loader, ses=ses)
+    main_learner=Learner(model=model, args=args, trainloader=train_loader, testloader=test_loader)
     
-    # main_learner.learn()
-
     for epoch in range(0, args.epochs):
         main_learner.adjust_learning_rate(epoch)
 

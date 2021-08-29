@@ -1,18 +1,6 @@
-import math
 import torch
-from torch.optim.optimizer import Optimizer, required
 from torch import nn
 import torch.nn.functional as F
-
-
-class BasicNet(nn.Module):
-    def __init__(self):
-        super(BasicNet, self).__init__()
-        self.convnet = RPS_net_mlp()    
-        
-    def forward(self, x):
-        x = self.convnet(x)
-        return x
 
 
 class RPS_net_mlp(nn.Module):

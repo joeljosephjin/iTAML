@@ -9,38 +9,25 @@ from utils import *
 
 
 class Learner(LearnerUtils):
-    def __init__(self, model, args, trainloader, testloader, ses):
+    def __init__(self, model, args, trainloader, testloader):
         super(Learner, self).__init__()
         self.model=model
         self.args=args
         self.trainloader=trainloader 
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.testloader=testloader
-
-        self.ses = ses
-        
-        # meta_parameters = []
-        # for n,p in self.model.named_parameters():
-        #     meta_parameters.append(p)
-        #     p.requires_grad = True
-
         self.optimizer = optim.SGD(model.parameters(), lr=self.args.lr, momentum=0.9, weight_decay=0.001)
 
     def train(self):
-        self.model.train()
-
         bi = self.args.class_per_task*(1+self.args.sess)
         
         for batch_idx, (inputs, targets) in enumerate(self.trainloader):
-
-            targets_one_hot = torch.zeros(inputs.shape[0], bi).scatter_(1, targets[:,None], 1)
+            targets_one_hot = torch.zeros(inputs.shape[0], bi).scatter_(1, targets[:, None], 1)
             inputs, targets_one_hot = inputs.to(self.device), targets_one_hot.to(self.device)
 
             reptile_grads = {}            
             targets_np = targets.detach().cpu().numpy()
             num_updates = 0
-            
-            # outputs2 = model(inputs)
             
             model_base = copy.deepcopy(self.model)
             for task_idx in range(1+self.args.sess):
@@ -76,13 +63,8 @@ class Learner(LearnerUtils):
                 
     def test(self):
         class_acc = {}
-        
-        self.model.eval()
-        
         for batch_idx, (inputs, targets) in enumerate(self.testloader):
-            targets_one_hot = torch.zeros(inputs.shape[0], self.args.num_class).scatter_(1, targets[:,None], 1)
-            
-            inputs, targets_one_hot, targets = inputs.to(self.device), targets_one_hot.to(self.device), targets.to(self.device)
+            inputs, targets = inputs.to(self.device), targets.to(self.device)
 
             outputs = self.model(inputs)
 
