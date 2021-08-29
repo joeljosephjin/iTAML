@@ -29,7 +29,6 @@ class Learner(LearnerUtils):
             targets_np = targets.detach().cpu().numpy()
             num_updates = 0
             
-            model_base = copy.deepcopy(self.model)
             for task_idx in range(1+self.args.sess):
                 idx = np.where((targets_np >= task_idx*self.args.class_per_task) & (targets_np < (task_idx+1)*self.args.class_per_task))[0]
                 ai, bi = self.args.class_per_task*task_idx, self.args.class_per_task*(task_idx+1)
@@ -37,29 +36,31 @@ class Learner(LearnerUtils):
                 class_inputs = inputs[idx]
                 class_targets_one_hot = targets_one_hot[idx]
 
-                # for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
-                #     p=copy.deepcopy(q)
+                adapted_params = self.model.cloned_state_dict()
 
                 for kr in range(self.args.r):
-                    class_outputs = self.model(class_inputs)
+                    class_outputs = self.model(class_inputs, adapted_params)
 
                     loss = F.binary_cross_entropy_with_logits(class_outputs[:, ai:bi], class_targets_one_hot[:, ai:bi]) 
                     self.optimizer.zero_grad()
-                    loss.backward()
-                    self.optimizer.step()
 
-            #     for i,p in enumerate(self.model.parameters()):
-            #         if(num_updates==0):
-            #             reptile_grads[i] = [p.data]
-            #         else:
-            #             reptile_grads[i].append(p.data)
+                    grads = torch.autograd.grad(loss, adapted_params.values(), create_graph=True)
+                    for (key, val), grad in zip(adapted_params.items(), grads):
+                        adapted_params[key] = val - self.args.lr * grad
 
-            #     num_updates += 1
+                for key, val in adapted_params.items():
+                    if(num_updates==0):
+                        reptile_grads[key] = [val.data]
+                    else:
+                        reptile_grads[key].append(val.data)
+
+                num_updates += 1
             
-            # for i,(p,q) in enumerate(zip(self.model.parameters(), model_base.parameters())):
-            #     alpha = np.exp(-self.args.beta*((1.0*self.args.sess)/self.args.num_task))
-            #     ll = torch.stack(reptile_grads[i])
-            #     p.data = torch.mean(ll,0)*(alpha) + (1-alpha)* q.data  
+            with torch.no_grad():
+                for key, p in self.model.named_parameters():
+                    alpha = np.exp(-self.args.beta*((1.0*self.args.sess)/self.args.num_task))
+                    ll = torch.stack(reptile_grads[key])
+                    p.copy_(torch.mean(ll,0)*(alpha) + (1-alpha)* p.data)
                 
     def test(self):
         class_acc = {}

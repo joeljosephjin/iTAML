@@ -2,6 +2,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from collections import OrderedDict
+
 
 class Net(nn.Module):
     def __init__(self):
@@ -16,17 +18,32 @@ class Net(nn.Module):
         self.linear3 = nn.Linear(400, 10, bias=False)
         self.sigmoid = nn.Sigmoid()
         
-    def forward(self, x):
-        x = x.view(-1, 784)
+    def forward(self, x, params=None):
+        out = x.view(-1, 784)
+        if not params:
+            out = self.linear1(out)
+            out = F.relu(out)
+            out = self.linear2(out)
+            out = F.relu(out)
+            out = self.linear3(out)
+        else:
+            out = F.linear(out, params['linear1.weight'], params['linear1.bias'])
+            out = F.relu(out)
+            out = F.linear(out, params['linear2.weight'], params['linear2.bias'])
+            out = F.relu(out)
+            out = F.linear(out, params['linear3.weight'])
 
-        x = self.linear1(x)
-        x = F.relu(x)
-        
-        x = self.linear2(x)
-        x = F.relu(x)
+        return out
 
-        x = self.linear3(x)
-        return x
+    def cloned_state_dict(self):
+        adapted_params = OrderedDict()
+        for key, val in self.named_parameters():
+            adapted_params[key] = val
+        return adapted_params
+
+
+
+
 
 
 class LearnerUtils():
