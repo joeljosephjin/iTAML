@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import sys
 
-from utils import BasicNet1
+from utils import BasicNet
 from learner_task_itaml import Learner
 import incremental_dataloader as data
 
@@ -35,6 +35,8 @@ class args:
     mu = 1
     beta = 0.5
     r = 1
+
+    start_sess = 0
     
 seed = 2481
 random.seed(seed)
@@ -43,7 +45,7 @@ torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-model = BasicNet1(args, 0).to(device)
+model = BasicNet().to(device)
 
 inc_dataset = data.IncrementalDataset(
                     dataset_name=args.dataset,
@@ -57,10 +59,10 @@ inc_dataset = data.IncrementalDataset(
                     increment=args.class_per_task,
                 )
     
-start_sess = int(sys.argv[1])
+# start_sess = int(sys.argv[1])
 memory = None
 
-for ses in range(start_sess, args.num_task):
+for ses in range(args.start_sess, args.num_task):
     args.sess=ses
     
     task_info, train_loader, val_loader, test_loader, for_memory = inc_dataset.new_task(memory)
@@ -70,7 +72,13 @@ for ses in range(start_sess, args.num_task):
     
     main_learner=Learner(model=model, args=args, trainloader=train_loader, testloader=test_loader, ses=ses)
     
-    main_learner.learn()
+    # main_learner.learn()
 
-    # main_learner.meta_test(main_learner.model, memory, inc_dataset)
+    for epoch in range(0, args.epochs):
+        main_learner.adjust_learning_rate(epoch)
+
+        print('\nEpoch: [%d | %d] Sess: %d' % (epoch+1, args.epochs, args.sess))
+
+        main_learner.train()
+        main_learner.test()
 

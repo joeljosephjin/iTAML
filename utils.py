@@ -5,33 +5,16 @@ from torch import nn
 import torch.nn.functional as F
 
 
-# BasicNet
-class BasicNet1(nn.Module):
-
-    def __init__(
-        self, args, use_bias=False, init="kaiming", use_multi_fc=False, device=None
-    ):
-        super(BasicNet1, self).__init__()
-
-        self.use_bias = use_bias
-        self.init = init
-        self.use_multi_fc = use_multi_fc
-        self.args = args
-
+class BasicNet(nn.Module):
+    def __init__(self):
+        super(BasicNet, self).__init__()
         self.convnet = RPS_net_mlp()    
-        
-        self.classifier = None
-
-        self.n_classes = 0
-        self.device = device
-        self.cuda()
         
     def forward(self, x):
         x = self.convnet(x)
         return x
 
 
-# RPS Net Module
 class RPS_net_mlp(nn.Module):
 
         def __init__(self):
@@ -61,19 +44,39 @@ class RPS_net_mlp(nn.Module):
             return x
 
 
-# Accuracy
-def accuracy(output, target, topk=(1,)):
-    """Computes the accuracy over the k top predictions for the specified values of k"""
+class LearnerUtils():
+    def __init__(self):
+        pass
+    
+    def adjust_learning_rate(self, epoch):
+        if epoch in self.args.schedule:
+            self.state['lr'] *= self.args.gamma
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] = self.state['lr']
 
-    maxk = max(topk)
-    batch_size = target.size(0)
-    _, pred = output.topk(maxk, 1, True, True)
-    pred = pred.t()
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
+    def get_class_accs(self, pred, correct, class_acc, task_idx=None):
+        for i,p in enumerate(pred.view(-1)):
+            key = int(p.detach().cpu().numpy())
 
+            if task_idx:
+                key += self.args.class_per_task * task_idx
 
-    res = []
-    for k in topk:
-        correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-        res.append(correct_k.mul_(100.0 / batch_size))
-    return res
+            if(correct[i]==1):
+                if(key in class_acc.keys()):
+                    class_acc[key] += 1
+                else:
+                    class_acc[key] = 1
+
+        return class_acc
+
+    def get_task_accuracies(self, class_acc):
+        acc_task = {}
+        for i in range(self.args.sess+1):
+            acc_task[i] = 0
+            for j in range(self.args.class_per_task):
+                try:
+                    acc_task[i] += class_acc[i*self.args.class_per_task+j]/self.args.sample_per_task_testing[i] * 100
+                except:
+                    pass
+                    
+        return acc_task
