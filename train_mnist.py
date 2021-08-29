@@ -72,5 +72,5 @@ for ses in range(start_sess, args.num_task):
     
     main_learner.learn()
 
-    main_learner.meta_test(main_learner.model, memory, inc_dataset)
+    # main_learner.meta_test(main_learner.model, memory, inc_dataset)
 
