@@ -34,11 +34,11 @@ class Learner(LearnerUtils):
                 idx = np.where((targets_np >= task_idx*self.args.class_per_task) & (targets_np < (task_idx+1)*self.args.class_per_task))[0]
                 ai, bi = self.args.class_per_task*task_idx, self.args.class_per_task*(task_idx+1)
                 
-                # for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
-                #     p=copy.deepcopy(q)
-
                 class_inputs = inputs[idx]
                 class_targets_one_hot = targets_one_hot[idx]
+
+                # for i,(p,q) in enumerate(zip(model.parameters(), model_base.parameters())):
+                #     p=copy.deepcopy(q)
 
                 for kr in range(self.args.r):
                     class_outputs = self.model(class_inputs)
@@ -64,15 +64,12 @@ class Learner(LearnerUtils):
     def test(self):
         class_acc = {}
         for batch_idx, (inputs, targets) in enumerate(self.testloader):
-            inputs, targets = inputs.to(self.device), targets.to(self.device)
-
-            outputs = self.model(inputs)
+            outputs = self.model(inputs.to(self.device))
 
             pred = torch.argmax(outputs[:,0:self.args.class_per_task*(1+self.args.sess)], 1, keepdim=False).view(1,-1)
-            correct = pred.eq(targets.view(1, -1).expand_as(pred)).view(-1) 
-
+            correct = pred.eq(targets.to(self.device).view(1, -1).expand_as(pred)).view(-1) 
             class_acc = self.get_class_accs(pred, correct, class_acc)
-
+            
         acc_task = self.get_task_accuracies(class_acc)
         print('test_task_accs:', acc_task)
         print('test_class_accs:', class_acc)

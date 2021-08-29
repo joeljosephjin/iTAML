@@ -3,33 +3,30 @@ from torch import nn
 import torch.nn.functional as F
 
 
-class RPS_net_mlp(nn.Module):
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.init()
 
-        def __init__(self):
-            super(RPS_net_mlp, self).__init__()
-            self.init()
+    def init(self):
+        """Initialize all parameters"""
+        self.linear1 = nn.Linear(784, 400)
+        self.linear2 = nn.Linear(400, 400)
+        self.relu = nn.ReLU()
+        self.linear3 = nn.Linear(400, 10, bias=False)
+        self.sigmoid = nn.Sigmoid()
+        
+    def forward(self, x):
+        x = x.view(-1, 784)
 
-        def init(self):
-            """Initialize all parameters"""
-            self.mlp1 = nn.Linear(784, 400)
-            self.mlp2 = nn.Linear(400, 400)
-            self.relu = nn.ReLU()
-            self.fc = nn.Linear(400, 10, bias=False)
-            self.sigmoid = nn.Sigmoid()
-            
-        def forward(self, x):
+        x = self.linear1(x)
+        x = F.relu(x)
+        
+        x = self.linear2(x)
+        x = F.relu(x)
 
-            x = x.view(-1, 784)
-
-            x = self.mlp1(x)
-            x = F.relu(x)
-            
-            x = self.mlp2(x)
-            x = F.relu(x)
-
-            x = self.fc(x)
-            
-            return x
+        x = self.linear3(x)
+        return x
 
 
 class LearnerUtils():

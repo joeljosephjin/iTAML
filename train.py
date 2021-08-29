@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import sys
 
-from utils import RPS_net_mlp
+from utils import Net
 from learner import Learner
 import incremental_dataloader as data
 
@@ -42,14 +42,13 @@ torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-model = RPS_net_mlp().to(device)
+model = Net().to(device)
 
 inc_dataset = data.IncrementalDataset(dataset_name=args.dataset, args=args, random_order=args.random_classes,
                         shuffle=True, seed=1, batch_size=args.train_batch, workers=args.workers,
                         validation_split=args.validation, increment=args.class_per_task)
     
 memory = None
-
 for ses in range(args.start_sess, args.num_task):
     args.sess=ses
     
