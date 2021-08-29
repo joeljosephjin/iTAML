@@ -7,7 +7,7 @@ import torch
 import sys
 
 from utils import RPS_net_mlp
-from learner_task_itaml import Learner
+from learner import Learner
 import incremental_dataloader as data
 
 class args:
