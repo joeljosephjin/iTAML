@@ -18,8 +18,10 @@ class args:
     test_samples_per_class = 1000
     dataset = "mnist"
     
-    epochs = 5
+    # epochs = 5
+    epochs = 20
     lr = 0.05
+    # lr = 0.005
     train_batch = 256
     test_batch = 256
     workers = 16
@@ -51,6 +53,11 @@ inc_dataset = data.IncrementalDataset(dataset_name=args.dataset, args=args, rand
 memory = None
 for ses in range(args.start_sess, args.num_task):
     args.sess=ses
+
+    if ses == 0:
+        args.epochs=5
+    else:
+        args.epochs=10
     
     task_info, train_loader, val_loader, test_loader, for_memory = inc_dataset.new_task(memory)
     memory = inc_dataset.get_memory(memory, for_memory)

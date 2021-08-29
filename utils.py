@@ -52,9 +52,9 @@ class LearnerUtils():
     
     def adjust_learning_rate(self, epoch):
         if epoch in self.args.schedule:
-            self.state['lr'] *= self.args.gamma
+            self.args.lr *= self.args.gamma
             for param_group in self.optimizer.param_groups:
-                param_group['lr'] = self.state['lr']
+                param_group['lr'] = self.args.lr
 
     def get_class_accs(self, pred, correct, class_acc, task_idx=None):
         for i,p in enumerate(pred.view(-1)):
