@@ -54,7 +54,7 @@ class args:
     
     epochs = 20
     # lr = 0.1
-    lr = 1e-4
+    lr = 0.05
     train_batch = 256
     test_batch = 256
     workers = 16
@@ -66,6 +66,7 @@ class args:
     memory = 2000
     mu = 1
     beta = 0.5
+    # r = 1
     r = 1
     
 state = {key:value for key, value in args.__dict__.items() if not key.startswith('__') and not callable(key)}

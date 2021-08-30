@@ -143,8 +143,8 @@ class Learner():
                     
                     if(self.args.sess==task_idx and self.args.sess==4 and self.args.dataset=="svhn"):
                         self.args.r = 4
-                    else:
-                        self.args.r = 1
+                    # else:
+                    #     self.args.r = 1
                         
                     for kr in range(self.args.r):
                         _, class_outputs = model(class_inputs)
